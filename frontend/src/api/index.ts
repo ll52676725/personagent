@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { LoginResult, Agent, Article, GenerateResult, Result } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
@@ -23,8 +23,40 @@ const attachAuth = (config: InternalAxiosRequestConfig) => {
   return config;
 };
 
+const handleResponse = (response: AxiosResponse) => response;
+
+const handleError = async (error: any) => {
+  const originalRequest = error.config;
+  if (error.response?.status === 401 && !originalRequest._retry) {
+    originalRequest._retry = true;
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      try {
+        const response = await apiClient.post('/auth/refresh', { refreshToken });
+        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', newRefreshToken);
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        return apiClient(originalRequest);
+      } catch (e) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/login';
+        return Promise.reject(e);
+      }
+    } else {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      window.location.href = '/login';
+    }
+  }
+  return Promise.reject(error);
+};
+
 apiClient.interceptors.request.use(attachAuth);
+apiClient.interceptors.response.use(handleResponse, handleError);
 articleClient.interceptors.request.use(attachAuth);
+articleClient.interceptors.response.use(handleResponse, handleError);
 
 export const authApi = {
   register: async (username: string, email: string, password: string) => {
