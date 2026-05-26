@@ -13,7 +13,6 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GenerateRequestDTO {
-    @NotBlank(message = "主题不能为空")
     private String topic;
     
     private List<String> keywords;
@@ -25,4 +24,6 @@ public class GenerateRequestDTO {
     private String content;
     
     private String model;
+    
+    private String style;
 }

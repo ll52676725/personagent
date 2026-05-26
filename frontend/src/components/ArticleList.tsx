@@ -10,7 +10,7 @@ export default function ArticleList() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [generateType, setGenerateType] = useState<'title' | 'summary' | 'content'>('title');
+  const [generateType, setGenerateType] = useState<'title' | 'summary' | 'content' | 'outline'>('title');
   const [generateInput, setGenerateInput] = useState('');
   const [generateResult, setGenerateResult] = useState<GenerateResult | null>(null);
 
@@ -43,8 +43,10 @@ export default function ArticleList() {
         response = await generateApi.title(generateInput);
       } else if (generateType === 'summary') {
         response = await generateApi.summary(generateInput);
-      } else {
+      } else if (generateType === 'content') {
         response = await generateApi.content(generateInput);
+      } else {
+        response = await generateApi.outline(generateInput);
       }
       
       if (response.code === 200) {
@@ -196,21 +198,21 @@ export default function ArticleList() {
           <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">AI内容生成</h3>
             
-            <div className="flex gap-2 mb-4">
-              {(['title', 'summary', 'content'] as const).map((type) => (
+            <div className="flex gap-2 mb-4 flex-wrap">
+              {(['title', 'summary', 'content', 'outline'] as const).map((type) => (
                 <button
                   key={type}
                   onClick={() => {
                     setGenerateType(type);
                     setGenerateResult(null);
                   }}
-                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-medium transition ${
                     generateType === type
                       ? 'bg-indigo-600 text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  {type === 'title' ? '生成标题' : type === 'summary' ? '生成概要' : '生成正文'}
+                  {type === 'title' ? '生成标题' : type === 'summary' ? '生成概要' : type === 'content' ? '生成正文' : '生成大纲'}
                 </button>
               ))}
             </div>
@@ -259,6 +261,22 @@ export default function ArticleList() {
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                   placeholder="例如：Spring Boot 入门教程"
+                />
+              </div>
+            )}
+            
+            {generateType === 'outline' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">输入文章主题</label>
+                <input
+                  type="text"
+                  value={generateInput}
+                  onChange={(e) => {
+                    setGenerateInput(e.target.value);
+                    setGenerateResult(null);
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  placeholder="例如：微服务架构设计"
                 />
               </div>
             )}

@@ -29,11 +29,11 @@ spring:
 
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY:}
-      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      api-key: sk-65f0add49f514ee7ae2f38e3e5dc5bde
+      base-url: https://api.deepseek.com
       chat:
         options:
-          model: gpt-4o-mini
+          model: deepseek-v4-flash
           temperature: 0.7
 
 agent:
@@ -43,3 +43,9 @@ agent:
       expiration: 86400
       refresh-expiration: 604800
     default-model: openai
+    ai:
+      fallback-enabled: ${AI_FALLBACK_ENABLED:true}
+    upload:
+      path: ${UPLOAD_PATH:./uploads}
+      allowed-types: image/jpeg,image/png,image/gif,image/webp
+      max-size: 5242880
