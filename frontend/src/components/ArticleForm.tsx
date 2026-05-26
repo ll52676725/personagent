@@ -170,15 +170,15 @@ export default function ArticleForm() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/articles')}
-            className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+            className="p-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-all"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">
+            <h1 className="text-3xl font-bold text-white">
               {isEdit ? '编辑文章' : '新建文章'}
             </h1>
-            <p className="text-gray-500 mt-1">{isEdit ? '修改已有文章内容' : '创建一篇新文章'}</p>
+            <p className="text-gray-400 mt-1">{isEdit ? '修改已有文章内容' : '创建一篇新文章'}</p>
           </div>
         </div>
         
@@ -186,10 +186,10 @@ export default function ArticleForm() {
           <button
             type="button"
             onClick={() => setShowPreview(!showPreview)}
-            className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition ${
+            className={`px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-all ${
               showPreview 
-                ? 'bg-indigo-100 text-indigo-700' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-gradient-to-r from-indigo-500 to-cyan-400 text-white shadow-lg' 
+                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
             }`}
           >
             <Eye className="w-4 h-4" />
@@ -199,12 +199,12 @@ export default function ArticleForm() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-          <span className="text-red-600">{error}</span>
+        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center gap-3 animate-fadeIn">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+          <span className="text-red-300">{error}</span>
           <button 
             onClick={() => setError('')}
-            className="ml-auto text-red-400 hover:text-red-600"
+            className="ml-auto text-red-400 hover:text-red-300 transition-colors"
           >
             关闭
           </button>
@@ -212,9 +212,9 @@ export default function ArticleForm() {
       )}
 
       {generatingType && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
-          <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
-          <span className="text-blue-600">
+        <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-2xl p-4 flex items-center gap-3 animate-fadeIn">
+          <Loader2 className="w-5 h-5 text-cyan-400 animate-spin flex-shrink-0" />
+          <span className="text-cyan-300">
             正在{generatingType === 'summary' ? '生成摘要' : '生成正文'}...
             {formData[generatingType].length > 0 && 
               ` (${formData[generatingType].length} 字)`
@@ -222,7 +222,7 @@ export default function ArticleForm() {
           </span>
           <button 
             onClick={handleStopGenerate}
-            className="ml-auto text-red-500 hover:text-red-700 flex items-center gap-1"
+            className="ml-auto text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors"
           >
             <StopCircle className="w-4 h-4" />
             停止
@@ -231,28 +231,28 @@ export default function ArticleForm() {
       )}
 
       {showPreview && formData.content ? (
-        <div className="bg-white rounded-xl shadow-sm p-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">{formData.title}</h1>
+        <div className="glass-card rounded-3xl p-8">
+          <h1 className="text-2xl font-bold text-white mb-4">{formData.title}</h1>
           {formData.summary && (
-            <p className="text-gray-600 italic border-l-4 border-indigo-300 pl-4 my-4">
+            <p className="text-gray-300 italic border-l-4 border-cyan-400/50 pl-4 my-4">
               {formData.summary}
             </p>
           )}
           <div 
-            className="prose max-w-none"
+            className="text-gray-200"
             dangerouslySetInnerHTML={{ __html: '<p>' + renderMarkdown(formData.content) + '</p>' }}
           />
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6">
+        <form onSubmit={handleSubmit} className="glass-card rounded-3xl p-6">
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">标题 *</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">标题 *</label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="input-field w-full text-lg"
                 placeholder="请输入文章标题"
                 disabled={loading}
               />
@@ -260,12 +260,12 @@ export default function ArticleForm() {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">概要</label>
+                <label className="block text-sm font-medium text-gray-300">概要</label>
                 <button
                   type="button"
                   onClick={generatingType === 'summary' ? handleStopGenerate : handleGenerateSummary}
                   disabled={!formData.title.trim()}
-                  className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-sm text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {generatingType === 'summary' ? (
                     <>
@@ -283,7 +283,7 @@ export default function ArticleForm() {
               <textarea
                 value={formData.summary}
                 onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
-                className="w-full h-24 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
+                className="input-field w-full h-24 resize-none"
                 placeholder="文章概要描述"
                 disabled={loading}
               />
@@ -294,12 +294,12 @@ export default function ArticleForm() {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">正文</label>
+                <label className="block text-sm font-medium text-gray-300">正文</label>
                 <button
                   type="button"
                   onClick={generatingType === 'content' ? handleStopGenerate : handleGenerateContent}
                   disabled={!formData.title.trim()}
-                  className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-sm text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {generatingType === 'content' ? (
                     <>
@@ -317,7 +317,7 @@ export default function ArticleForm() {
               <textarea
                 value={formData.content}
                 onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                className="w-full h-96 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none font-mono text-sm"
+                className="input-field w-full h-96 resize-none font-mono text-sm"
                 placeholder="文章正文内容（支持 Markdown 格式）"
                 disabled={loading}
               />
@@ -327,12 +327,12 @@ export default function ArticleForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">标签</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">标签</label>
               <input
                 type="text"
                 value={formData.tags}
                 onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="input-field w-full"
                 placeholder="多个标签用逗号分隔"
                 disabled={loading}
               />
@@ -342,7 +342,7 @@ export default function ArticleForm() {
               <button
                 type="button"
                 onClick={() => navigate('/articles')}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                className="flex-1 btn-secondary"
                 disabled={loading}
               >
                 取消
@@ -350,7 +350,7 @@ export default function ArticleForm() {
               <button
                 type="submit"
                 disabled={!formData.title.trim() || submitting || loading}
-                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? '保存中...' : (isEdit ? '保存修改' : '创建文章')}
               </button>

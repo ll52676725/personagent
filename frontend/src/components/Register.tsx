@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Mail, User, AlertCircle, CheckCircle } from 'lucide-react';
+import { Lock, Mail, User, AlertCircle, CheckCircle, Zap, ArrowRight } from 'lucide-react';
 import { authApi } from '@/api';
 
 export default function Register() {
@@ -44,117 +44,153 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md mx-4">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <User className="w-8 h-8 text-white" />
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden py-8">
+      <div className="absolute inset-0 bg-grid opacity-30" />
+      <div className="absolute inset-0 bg-radial" />
+      
+      <div className="absolute top-10 right-10 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl animate-float" />
+      <div className="absolute bottom-10 left-10 w-96 h-96 bg-pink-500/15 rounded-full blur-3xl animate-float delay-200" />
+      
+      <div className="relative z-10 w-full max-w-md mx-4">
+        <div className="text-center mb-8 animate-fadeIn">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mx-auto mb-6 glow-effect">
+            <Zap className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">创建账户</h1>
-          <p className="text-gray-500 mt-2">开始您的Agent之旅</p>
+          <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">
+            Agent<span className="gradient-text">AI</span>
+          </h1>
+          <p className="text-gray-400 text-lg">智能创作平台 · 赋能内容生产</p>
         </div>
 
-        {success ? (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-green-700 mb-2">注册成功</h2>
-            <p className="text-green-600">正在跳转到登录页面...</p>
+        <div className="glass-card rounded-3xl p-8 animate-fadeIn delay-100">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-white">创建账户</h2>
+            <p className="text-gray-400 mt-2">开始您的 AI 创作之旅</p>
           </div>
-        ) : (
-          <>
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500" />
-                <span className="text-red-600">{error}</span>
-              </div>
-            )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  用户名
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition"
-                    placeholder="4-20位字母、数字或下划线"
-                    disabled={loading}
-                  />
+          {success ? (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-8 text-center animate-fadeIn">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-10 h-10 text-emerald-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-emerald-300 mb-2">注册成功</h3>
+              <p className="text-emerald-400/80">正在跳转到登录页面...</p>
+            </div>
+          ) : (
+            <>
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-6 flex items-start gap-3 animate-fadeIn">
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <span className="text-red-300">{error}</span>
                 </div>
-              </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  邮箱
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition"
-                    placeholder="请输入邮箱地址"
-                    disabled={loading}
-                  />
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    用户名
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <input
+                      type="text"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      className="input-field w-full pl-12"
+                      placeholder="4-20位字母、数字或下划线"
+                      disabled={loading}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  密码
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition"
-                    placeholder="8-32位，需包含字母和数字"
-                    disabled={loading}
-                  />
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    邮箱
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="input-field w-full pl-12"
+                      placeholder="请输入邮箱地址"
+                      disabled={loading}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  确认密码
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition"
-                    placeholder="请再次输入密码"
-                    disabled={loading}
-                  />
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    密码
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <input
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="input-field w-full pl-12"
+                      placeholder="8-32位，需包含字母和数字"
+                      disabled={loading}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={loading || !formData.username || !formData.email || !formData.password || !formData.confirmPassword}
-                className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? '注册中...' : '注 册'}
-              </button>
-            </form>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    确认密码
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <input
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      className="input-field w-full pl-12"
+                      placeholder="请再次输入密码"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
 
-            <p className="text-center mt-6 text-gray-500">
+                <button
+                  type="submit"
+                  disabled={loading || !formData.username || !formData.email || !formData.password || !formData.confirmPassword}
+                  className="w-full btn-primary py-4 text-lg rounded-2xl flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      注册中...
+                    </>
+                  ) : (
+                    <>
+                      注 册
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+              </form>
+            </>
+          )}
+
+          <div className="mt-8 text-center">
+            <p className="text-gray-400">
               已有账户？{' '}
-              <Link to="/login" className="text-green-600 hover:text-green-700 font-medium">
-                立即登录
+              <Link 
+                to="/login" 
+                className="gradient-text font-semibold hover:underline"
+              >
+                立即登录 →
               </Link>
             </p>
-          </>
-        )}
+          </div>
+        </div>
+
+        <p className="text-center text-gray-500 text-sm mt-8">
+          © 2026 AgentAI. All rights reserved.
+        </p>
       </div>
     </div>
   );

@@ -66,18 +66,23 @@ export default function AgentList() {
 
   const getStatusInfo = (status: number) => {
     switch (status) {
-      case -1: return { label: '未申请', color: 'text-gray-500', bg: 'bg-gray-100', icon: XCircle };
-      case 0: return { label: '审核中', color: 'text-yellow-500', bg: 'bg-yellow-100', icon: Clock };
-      case 1: return { label: '已通过', color: 'text-green-500', bg: 'bg-green-100', icon: CheckCircle };
-      case 2: return { label: '已拒绝', color: 'text-red-500', bg: 'bg-red-100', icon: XCircle };
-      default: return { label: '未知', color: 'text-gray-500', bg: 'bg-gray-100', icon: AlertCircle };
+      case -1: return { label: '未申请', color: 'text-gray-400', bg: 'bg-white/5', icon: XCircle };
+      case 0: return { label: '审核中', color: 'text-amber-400', bg: 'bg-amber-500/20', icon: Clock };
+      case 1: return { label: '已通过', color: 'text-emerald-400', bg: 'bg-emerald-500/20', icon: CheckCircle };
+      case 2: return { label: '已拒绝', color: 'text-red-400', bg: 'bg-red-500/20', icon: XCircle };
+      default: return { label: '未知', color: 'text-gray-400', bg: 'bg-white/5', icon: AlertCircle };
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <Sparkles className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-gray-400">加载中...</p>
+        </div>
       </div>
     );
   }
@@ -85,73 +90,85 @@ export default function AgentList() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">Agent列表</h1>
-        <p className="text-gray-500 mt-1">浏览和申请使用平台上的智能Agent</p>
+        <h1 className="text-3xl font-bold text-white">Agent 列表</h1>
+        <p className="text-gray-400 mt-1">浏览和申请使用平台上的智能 Agent</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {agents.map((agent) => {
-          const permission = permissions.get(agent.id) || { status: -1 };
-          const statusInfo = getStatusInfo(permission.status);
-          const StatusIcon = statusInfo.icon;
-          
-          return (
-            <div 
-              key={agent.id}
-              className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                  <Sparkles className="w-7 h-7 text-white" />
+      {agents.length === 0 ? (
+        <div className="glass-card rounded-3xl p-12 text-center">
+          <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="w-10 h-10 text-gray-500" />
+          </div>
+          <h3 className="text-white font-semibold text-lg mb-2">暂无可用 Agent</h3>
+          <p className="text-gray-400">系统正在准备中，请稍后再来查看</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {agents.map((agent, index) => {
+            const permission = permissions.get(agent.id) || { status: -1 };
+            const statusInfo = getStatusInfo(permission.status);
+            const StatusIcon = statusInfo.icon;
+            
+            return (
+              <div 
+                key={agent.id}
+                className="glass-card rounded-3xl p-6 glass-card-hover animate-fadeIn opacity-0"
+                style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'forwards' }}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg">
+                    <Sparkles className="w-7 h-7 text-white" />
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusInfo.bg} ${statusInfo.color} flex items-center gap-1`}>
+                    <StatusIcon className="w-3 h-3" />
+                    {statusInfo.label}
+                  </span>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusInfo.bg} ${statusInfo.color}`}>
-                  <StatusIcon className="w-3 h-3 inline mr-1" />
-                  {statusInfo.label}
-                </span>
+                
+                <h3 className="text-lg font-semibold text-white mb-2">{agent.name}</h3>
+                <p className="text-gray-400 text-sm mb-4 line-clamp-2">{agent.description}</p>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">模块: {agent.moduleName}</span>
+                  {permission.status === 1 ? (
+                    <button 
+                      className="btn-primary text-sm px-4 py-2"
+                      onClick={() => {}}
+                    >
+                      立即使用
+                    </button>
+                  ) : permission.status === 0 ? (
+                    <button 
+                      className="btn-secondary text-sm px-4 py-2 cursor-not-allowed opacity-70"
+                      disabled
+                    >
+                      审核中...
+                    </button>
+                  ) : (
+                    <button 
+                      className="btn-secondary text-sm px-4 py-2 flex items-center gap-2"
+                      onClick={() => setApplyModal(agent.id)}
+                    >
+                      <Send className="w-4 h-4" />
+                      申请使用
+                    </button>
+                  )}
+                </div>
               </div>
-              
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">{agent.name}</h3>
-              <p className="text-gray-500 text-sm mb-4 line-clamp-2">{agent.description}</p>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-400">模块: {agent.moduleName}</span>
-                {permission.status === 1 ? (
-                  <button 
-                    className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition"
-                    onClick={() => {}}
-                  >
-                    立即使用
-                  </button>
-                ) : permission.status === 0 ? (
-                  <button 
-                    className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-lg cursor-not-allowed"
-                    disabled
-                  >
-                    审核中...
-                  </button>
-                ) : (
-                  <button 
-                    className="px-4 py-2 border border-indigo-600 text-indigo-600 text-sm rounded-lg hover:bg-indigo-50 transition flex items-center gap-2"
-                    onClick={() => setApplyModal(agent.id)}
-                  >
-                    <Send className="w-4 h-4" />
-                    申请使用
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {applyModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">申请使用Agent</h3>
-            <p className="text-gray-500 text-sm mb-4">请填写申请理由，审核通过后即可使用</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setApplyModal(null); setApplyReason(''); setError(''); }} />
+          <div className="relative glass-card rounded-3xl p-6 w-full max-w-md animate-fadeIn">
+            <h3 className="text-xl font-bold text-white mb-2">申请使用 Agent</h3>
+            <p className="text-gray-400 text-sm mb-4">请填写申请理由，审核通过后即可使用</p>
             
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-red-600 text-sm">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-4 text-red-300 text-sm animate-fadeIn">
                 {error}
               </div>
             )}
@@ -162,24 +179,24 @@ export default function AgentList() {
                 setApplyReason(e.target.value);
                 setError('');
               }}
-              className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
+              className="input-field w-full h-32 resize-none"
               placeholder="请说明您的使用场景和需求..."
             />
             
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-3 mt-6">
               <button
                 onClick={() => {
                   setApplyModal(null);
                   setApplyReason('');
                   setError('');
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                className="flex-1 btn-secondary"
               >
                 取消
               </button>
               <button
                 onClick={() => handleApply(applyModal)}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                className="flex-1 btn-primary"
               >
                 提交申请
               </button>

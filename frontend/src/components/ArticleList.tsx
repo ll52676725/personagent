@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Plus, Edit, Trash2, Eye, Calendar, Sparkles } from 'lucide-react';
+import { BookOpen, Plus, Edit, Trash2, Eye, Calendar, Sparkles, Search, X, Copy, Check, TrendingUp } from 'lucide-react';
 import { articleApi, generateApi } from '@/api';
-import { Article, GenerateResult } from '@/types';
+import { Article } from '@/types';
 
 export default function ArticleList() {
   const navigate = useNavigate();
@@ -12,7 +12,9 @@ export default function ArticleList() {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [generateType, setGenerateType] = useState<'title' | 'summary' | 'content' | 'outline'>('title');
   const [generateInput, setGenerateInput] = useState('');
-  const [generateResult, setGenerateResult] = useState<GenerateResult | null>(null);
+  const [generatedContent, setGeneratedContent] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchArticles();
@@ -31,31 +33,33 @@ export default function ArticleList() {
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
     if (!generateInput.trim()) return;
     
     setGenerating(true);
-    setGenerateResult(null);
+    setGeneratedContent('');
     
-    try {
-      let response;
-      if (generateType === 'title') {
-        response = await generateApi.title(generateInput);
-      } else if (generateType === 'summary') {
-        response = await generateApi.summary(generateInput);
-      } else if (generateType === 'content') {
-        response = await generateApi.content(generateInput);
-      } else {
-        response = await generateApi.outline(generateInput);
-      }
-      
-      if (response.code === 200) {
-        setGenerateResult(response.data);
-      }
-    } catch (err) {
-      console.error('Failed to generate:', err);
-    } finally {
+    const onChunk = (chunk: string) => {
+      setGeneratedContent(prev => prev + chunk);
+    };
+    
+    const onComplete = () => {
       setGenerating(false);
+    };
+    
+    const onError = (error: string) => {
+      console.error('Generate error:', error);
+      setGenerating(false);
+    };
+
+    if (generateType === 'title') {
+      generateApi.titleStream(generateInput, undefined, onChunk, onComplete, onError);
+    } else if (generateType === 'summary') {
+      generateApi.summaryStream(generateInput, undefined, onChunk, onComplete, onError);
+    } else if (generateType === 'content') {
+      generateApi.contentStream(generateInput, undefined, onChunk, onComplete, onError);
+    } else {
+      generateApi.outlineStream(generateInput, undefined, onChunk, onComplete, onError);
     }
   };
 
@@ -72,264 +76,320 @@ export default function ArticleList() {
     }
   };
 
+  const handleCopyContent = () => {
+    navigator.clipboard.writeText(generatedContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const getStatusLabel = (status: number) => {
     switch (status) {
-      case 0: return { label: '草稿', color: 'bg-gray-100 text-gray-600' };
-      case 1: return { label: '已发布', color: 'bg-green-100 text-green-600' };
-      case 2: return { label: '已归档', color: 'bg-orange-100 text-orange-600' };
-      default: return { label: '未知', color: 'bg-gray-100 text-gray-500' };
+      case 0: return { label: '草稿', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' };
+      case 1: return { label: '已发布', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' };
+      case 2: return { label: '已归档', color: 'bg-gray-500/20 text-gray-400 border-gray-500/30' };
+      default: return { label: '未知', color: 'bg-gray-500/20 text-gray-400 border-gray-500/30' };
     }
   };
 
+  const filteredArticles = articles.filter(a => 
+    a.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <BookOpen className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-gray-400">加载中...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">文章管理</h1>
-          <p className="text-gray-500 mt-1">管理您的技术文章</p>
+          <h1 className="text-3xl font-bold text-white mb-1">
+            文章创作
+          </h1>
+          <p className="text-gray-400">
+            管理您的所有文章内容
+          </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <button
             onClick={() => setShowGenerateModal(true)}
-            className="px-4 py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition flex items-center gap-2"
+            className="btn-secondary flex items-center gap-2"
           >
-            <Sparkles className="w-4 h-4" />
-            AI生成
+            <Sparkles className="w-5 h-5" />
+            AI 生成
           </button>
           <button
             onClick={() => navigate('/articles/new')}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2"
+            className="btn-primary flex items-center gap-2"
           >
-            <Plus className="w-4 h-4" />
-            新建文章
+            <Plus className="w-5 h-5" />
+            创建文章
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">标题</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {articles.length > 0 ? (
-              articles.map((article) => {
-                const status = getStatusLabel(article.status);
-                return (
-                  <tr key={article.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <BookOpen className="w-5 h-5 text-indigo-500" />
-                        <span className="font-medium text-gray-800">{article.title}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${status.color}`}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="stat-card">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center">
+              <BookOpen className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-white">{articles.length}</p>
+              <p className="text-gray-400 text-sm">总文章数</p>
+            </div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-400 flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-white">{articles.filter(a => a.status === 1).length}</p>
+              <p className="text-gray-400 text-sm">已发布</p>
+            </div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-white">{articles.filter(a => a.status === 0).length}</p>
+              <p className="text-gray-400 text-sm">草稿箱</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="glass-card rounded-3xl p-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+          <h2 className="text-xl font-bold text-white">所有文章</h2>
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="搜索文章..."
+              className="input-field pl-12 w-full md:w-72"
+            />
+          </div>
+        </div>
+
+        {filteredArticles.length > 0 ? (
+          <div className="space-y-3">
+            {filteredArticles.map((article, index) => {
+              const status = getStatusLabel(article.status);
+              return (
+                <div
+                  key={article.id}
+                  className="group flex flex-col md:flex-row md:items-center gap-4 p-5 rounded-2xl hover:bg-white/5 transition-all cursor-pointer animate-fadeIn opacity-0"
+                  style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'forwards' }}
+                  onClick={() => navigate(`/articles/${article.id}`)}
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-cyan-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    <BookOpen className="w-7 h-7 text-cyan-400" />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="text-white font-semibold text-lg truncate group-hover:text-cyan-300 transition-colors">
+                        {article.title}
+                      </h3>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${status.color} flex-shrink-0`}>
                         {status.label}
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="flex items-center gap-1 text-gray-500 text-sm">
-                        <Calendar className="w-4 h-4" />
-                        {new Date(article.createdAt).toLocaleDateString()}
+                    </div>
+                    <p className="text-gray-400 text-sm truncate">
+                      {article.summary || '暂无摘要'}
+                    </p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(article.createdAt).toLocaleDateString('zh-CN')}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => navigate(`/articles/${article.id}`)}
-                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                          title="查看"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => navigate(`/articles/${article.id}/edit`)}
-                          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                          title="编辑"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(article.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                          title="删除"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={4} className="px-6 py-12 text-center">
-                  <BookOpen className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p className="text-gray-500">暂无文章</p>
-                  <button
-                    onClick={() => navigate('/articles/new')}
-                    className="text-indigo-600 hover:text-indigo-700 font-medium mt-2"
-                  >
-                    创建第一篇文章
-                  </button>
-                </td>
-              </tr>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => navigate(`/articles/${article.id}`)}
+                      className="p-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-all"
+                      title="查看"
+                    >
+                      <Eye className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => navigate(`/articles/${article.id}/edit`)}
+                      className="p-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-cyan-400 transition-all"
+                      title="编辑"
+                    >
+                      <Edit className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(article.id)}
+                      className="p-3 rounded-xl hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all"
+                      title="删除"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="w-10 h-10 text-gray-500" />
+            </div>
+            <h3 className="text-white font-semibold text-lg mb-2">
+              {searchTerm ? '未找到匹配的文章' : '还没有文章'}
+            </h3>
+            <p className="text-gray-400 mb-6">
+              {searchTerm ? '尝试使用其他关键词搜索' : '开始创作您的第一篇文章吧'}
+            </p>
+            {!searchTerm && (
+              <button
+                onClick={() => navigate('/articles/new')}
+                className="btn-primary"
+              >
+                创建第一篇文章
+              </button>
             )}
-          </tbody>
-        </table>
+          </div>
+        )}
       </div>
 
       {showGenerateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">AI内容生成</h3>
-            
-            <div className="flex gap-2 mb-4 flex-wrap">
-              {(['title', 'summary', 'content', 'outline'] as const).map((type) => (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowGenerateModal(false)} />
+          <div className="relative glass-card rounded-3xl p-6 w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col animate-fadeIn">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-white">AI 智能生成</h2>
+                <p className="text-gray-400 text-sm mt-1">输入主题，AI 为您生成内容</p>
+              </div>
+              <button
+                onClick={() => setShowGenerateModal(false)}
+                className="p-3 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-all"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="flex gap-2 mb-6 flex-wrap">
+              {([
+                { id: 'title', label: '标题' },
+                { id: 'summary', label: '摘要' },
+                { id: 'outline', label: '大纲' },
+                { id: 'content', label: '正文' },
+              ] as const).map((type) => (
                 <button
-                  key={type}
+                  key={type.id}
                   onClick={() => {
-                    setGenerateType(type);
-                    setGenerateResult(null);
+                    setGenerateType(type.id);
+                    setGeneratedContent('');
                   }}
-                  className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    generateType === type
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  className={`px-4 py-2 rounded-xl font-medium transition-all ${
+                    generateType === type.id
+                      ? 'bg-gradient-to-r from-indigo-500 to-cyan-400 text-white shadow-lg'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  {type === 'title' ? '生成标题' : type === 'summary' ? '生成概要' : type === 'content' ? '生成正文' : '生成大纲'}
+                  {type.label}
                 </button>
               ))}
             </div>
 
-            {generateType === 'title' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">输入主题</label>
-                <input
-                  type="text"
-                  value={generateInput}
-                  onChange={(e) => {
-                    setGenerateInput(e.target.value);
-                    setGenerateResult(null);
-                  }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  placeholder="例如：React Hooks 最佳实践"
-                />
-              </div>
-            )}
-            
-            {generateType === 'summary' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">输入文章标题</label>
-                <input
-                  type="text"
-                  value={generateInput}
-                  onChange={(e) => {
-                    setGenerateInput(e.target.value);
-                    setGenerateResult(null);
-                  }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  placeholder="例如：深入理解 React Hooks"
-                />
-              </div>
-            )}
-            
-            {generateType === 'content' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">输入文章标题</label>
-                <input
-                  type="text"
-                  value={generateInput}
-                  onChange={(e) => {
-                    setGenerateInput(e.target.value);
-                    setGenerateResult(null);
-                  }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  placeholder="例如：Spring Boot 入门教程"
-                />
-              </div>
-            )}
-            
-            {generateType === 'outline' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">输入文章主题</label>
-                <input
-                  type="text"
-                  value={generateInput}
-                  onChange={(e) => {
-                    setGenerateInput(e.target.value);
-                    setGenerateResult(null);
-                  }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  placeholder="例如：微服务架构设计"
-                />
-              </div>
-            )}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                {generateType === 'title' || generateType === 'outline' ? '文章主题' : '文章标题'}
+              </label>
+              <input
+                type="text"
+                value={generateInput}
+                onChange={(e) => setGenerateInput(e.target.value)}
+                placeholder={generateType === 'title' || generateType === 'outline' ? '请输入文章主题，如：Java 并发编程' : '请输入文章标题'}
+                className="input-field w-full text-lg"
+                onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+                disabled={generating}
+              />
+            </div>
 
-            <button
-              onClick={handleGenerate}
-              disabled={!generateInput.trim() || generating}
-              className="w-full mt-4 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {generating ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  生成中...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  生成内容
-                </>
-              )}
-            </button>
-
-            {generateResult && (
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">生成结果</label>
-                {generateResult.items ? (
-                  <div className="space-y-2">
-                    {generateResult.items.map((item, index) => (
-                      <div key={index} className="p-3 bg-gray-50 rounded-lg text-gray-800">
-                        {item}
-                      </div>
-                    ))}
+            <div className="flex-1 overflow-hidden flex flex-col min-h-[200px]">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-gray-400">
+                  {generating ? '正在生成...' : '生成结果'}
+                  {generatedContent && ` (${generatedContent.length} 字)`}
+                </span>
+                {generatedContent && (
+                  <button
+                    onClick={handleCopyContent}
+                    className="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? '已复制' : '复制'}
+                  </button>
+                )}
+              </div>
+              <div className="flex-1 overflow-auto glass-card rounded-2xl p-4 scrollbar-thin">
+                {generating && !generatedContent ? (
+                  <div className="flex items-center gap-3 text-gray-400">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-400"></div>
+                    <span>AI 正在思考中...</span>
                   </div>
-                ) : generateResult.content ? (
-                  <textarea
-                    value={generateResult.content}
-                    readOnly
-                    className="w-full h-64 p-3 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
-                  />
-                ) : null}
+                ) : generatedContent ? (
+                  <div className="text-gray-300 whitespace-pre-wrap leading-relaxed">
+                    {generatedContent}
+                    {generating && <span className="inline-block w-2 h-5 bg-cyan-400 ml-1 animate-pulse align-middle" />}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Sparkles className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                    <p>输入{generateType === 'title' || generateType === 'outline' ? '主题' : '标题'}后点击生成</p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
-            <button
-              onClick={() => {
-                setShowGenerateModal(false);
-                setGenerateInput('');
-                setGenerateResult(null);
-              }}
-              className="w-full mt-4 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-            >
-              关闭
-            </button>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowGenerateModal(false)}
+                className="flex-1 btn-secondary"
+              >
+                关闭
+              </button>
+              <button
+                onClick={handleGenerate}
+                disabled={generating || !generateInput.trim()}
+                className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {generating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5" />
+                    开始生成
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,3 +1,5 @@
+import type { LucideIcon } from 'lucide-react';
+
 export interface User {
   id: number;
   username: string;
@@ -72,4 +74,34 @@ export interface Result<T> {
   message: string;
   data: T;
   timestamp: number;
+}
+
+export interface DisplayField {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+}
+
+export interface InputField {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  icon: LucideIcon;
+  type?: 'text' | 'password';
+  placeholder?: string;
+}
+
+export interface ToggleField {
+  label: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+}
+
+export interface SettingsSection {
+  title: string;
+  icon: LucideIcon;
+  gradient: string;
+  displayFields?: DisplayField[];
+  inputFields?: InputField[];
+  toggles?: ToggleField[];
 }

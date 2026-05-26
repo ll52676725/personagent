@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { User, Mail, Shield, Bell, Globe, Save, CheckCircle } from 'lucide-react';
+import { User, Mail, Shield, Bell, Globe, Save, CheckCircle, Key, Database } from 'lucide-react';
 import { authApi } from '@/api';
 import { useAuthStore } from '@/store/authStore';
+import type { SettingsSection } from '@/types';
 
 export default function Settings() {
   const storeUser = useAuthStore((s) => s.user);
@@ -30,157 +31,192 @@ export default function Settings() {
     };
     load();
   }, [setUser]);
+
   const [notifications, setNotifications] = useState({
     email: true,
     push: false,
     weekly: true,
   });
   const [saved, setSaved] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [apiUrl, setApiUrl] = useState('');
+  const [aiModel, setAiModel] = useState('');
 
   const handleSave = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
 
+  const settingsSections: SettingsSection[] = [
+    {
+      title: '个人资料',
+      icon: User,
+      gradient: 'from-violet-500 to-purple-600',
+      displayFields: [
+        { label: '用户名', value: userInfo.username, icon: User },
+        { label: '邮箱', value: userInfo.email, icon: Mail },
+      ],
+      inputFields: undefined,
+      toggles: undefined
+    },
+    {
+      title: 'AI 配置',
+      icon: Key,
+      gradient: 'from-indigo-500 to-cyan-400',
+      displayFields: undefined,
+      inputFields: [
+        { label: 'API Key', value: apiKey, onChange: setApiKey, icon: Key, type: 'password' as const, placeholder: 'sk-...' },
+        { label: 'API URL', value: apiUrl, onChange: setApiUrl, icon: Globe, placeholder: 'https://api.openai.com/v1' },
+        { label: '默认模型', value: aiModel, onChange: setAiModel, icon: Database, placeholder: 'gpt-4o-mini' },
+      ],
+      toggles: undefined
+    },
+    {
+      title: '通知设置',
+      icon: Bell,
+      gradient: 'from-emerald-500 to-teal-400',
+      displayFields: undefined,
+      inputFields: undefined,
+      toggles: [
+        { label: '邮件通知', value: notifications.email, onChange: (v: boolean) => setNotifications(p => ({ ...p, email: v })) },
+        { label: '推送通知', value: notifications.push, onChange: (v: boolean) => setNotifications(p => ({ ...p, push: v })) },
+        { label: '周报推送', value: notifications.weekly, onChange: (v: boolean) => setNotifications(p => ({ ...p, weekly: v })) },
+      ]
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">设置</h1>
-        <p className="text-gray-500 mt-1">管理您的账户设置</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white">设置</h1>
+          <p className="text-gray-400 mt-1">管理您的账户和应用设置</p>
+        </div>
+        <button
+          onClick={handleSave}
+          className="btn-primary flex items-center gap-2"
+        >
+          {saved ? (
+            <>
+              <CheckCircle className="w-5 h-5" />
+              已保存
+            </>
+          ) : (
+            <>
+              <Save className="w-5 h-5" />
+              保存设置
+            </>
+          )}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <User className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-lg font-semibold text-gray-800">账户信息</h2>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">用户名</label>
-                <input
-                  type="text"
-                  value={userInfo.username}
-                  onChange={(e) => setUserInfo(prev => ({ ...prev, username: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">邮箱</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="email"
-                    value={userInfo.email}
-                    onChange={(e) => setUserInfo(prev => ({ ...prev, email: e.target.value }))}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  />
-                  <span className="px-3 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-medium flex items-center gap-1">
-                    <CheckCircle className="w-4 h-4" />
-                    已验证
-                  </span>
+      <div className="space-y-6">
+        {settingsSections.map((section) => {
+          const Icon = section.icon;
+          return (
+            <div key={section.title} className="glass-card rounded-3xl p-6 glass-card-hover">
+              <div className="flex items-center gap-4 mb-6">
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${section.gradient} flex items-center justify-center shadow-lg`}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">{section.title}</h2>
+                  <p className="text-gray-400 text-sm">
+                    {section.title === '个人资料' && '您的基本信息'}
+                    {section.title === 'AI 配置' && '连接您的 AI 服务'}
+                    {section.title === '通知设置' && '管理通知偏好'}
+                  </p>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Bell className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-lg font-semibold text-gray-800">通知设置</h2>
-            </div>
-
-            <div className="space-y-4">
-              {[
-                { key: 'email', label: '邮件通知', desc: '接收重要更新和新闻邮件', icon: Mail },
-                { key: 'push', label: '推送通知', desc: '接收浏览器推送通知', icon: Globe },
-                { key: 'weekly', label: '周报', desc: '每周收到平台更新摘要', icon: Shield },
-              ].map((item) => {
-                const Icon = item.icon;
-                return (
-                  <div key={item.key} className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-3">
-                        <Icon className="w-5 h-5 text-gray-400" />
-                        <span className="font-medium text-gray-800">{item.label}</span>
+              {section.displayFields && (
+                <div className="space-y-4">
+                  {section.displayFields.map((field) => {
+                    const Icon = field.icon;
+                    return (
+                      <div key={field.label}>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          {field.label}
+                        </label>
+                        <div className="relative">
+                          <Icon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                          <input
+                            type="text"
+                            value={field.value}
+                            disabled
+                            className="input-field w-full pl-12 opacity-70"
+                          />
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-500 ml-8">{item.desc}</p>
-                    </div>
-                    <button
-                      onClick={() => setNotifications(prev => ({
-                        ...prev,
-                        [item.key]: !prev[item.key as keyof typeof prev],
-                      }))}
-                      className={`w-12 h-6 rounded-full transition-colors ${
-                        notifications[item.key as keyof typeof notifications]
-                          ? 'bg-indigo-600'
-                          : 'bg-gray-300'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                          notifications[item.key as keyof typeof notifications]
-                            ? 'translate-x-6'
-                            : 'translate-x-0.5'
+                    );
+                  })}
+                </div>
+              )}
+
+              {section.inputFields && (
+                <div className="space-y-4">
+                  {section.inputFields.map((field) => {
+                    const Icon = field.icon;
+                    return (
+                      <div key={field.label}>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          {field.label}
+                        </label>
+                        <div className="relative">
+                          <Icon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                          <input
+                            type={field.type || 'text'}
+                            value={field.value}
+                            onChange={(e) => field.onChange(e.target.value)}
+                            placeholder={field.placeholder}
+                            className="input-field w-full pl-12"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {section.toggles && (
+                <div className="space-y-4">
+                  {section.toggles.map((toggle) => (
+                    <div key={toggle.label} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
+                      <span className="text-gray-300">{toggle.label}</span>
+                      <button
+                        onClick={() => toggle.onChange(!toggle.value)}
+                        className={`relative w-14 h-7 rounded-full transition-all ${
+                          toggle.value 
+                            ? 'bg-gradient-to-r from-indigo-500 to-cyan-400' 
+                            : 'bg-white/10'
                         }`}
-                      />
-                    </button>
-                  </div>
-                );
-              })}
+                      >
+                        <span className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-lg transition-transform ${
+                          toggle.value ? 'translate-x-7' : ''
+                        }`} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        <div className="glass-card rounded-3xl p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center shadow-lg">
+              <Shield className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">安全提示</h2>
+              <p className="text-gray-400 text-sm">保护您的账户安全</p>
             </div>
           </div>
-
-          <button
-            onClick={handleSave}
-            className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center justify-center gap-2"
-          >
-            {saved ? (
-              <>
-                <CheckCircle className="w-5 h-5" />
-                已保存
-              </>
-            ) : (
-              <>
-                <Save className="w-5 h-5" />
-                保存更改
-              </>
-            )}
-          </button>
-        </div>
-
-        <div className="space-y-6">
-          <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl p-6 text-white">
-            <h3 className="text-lg font-semibold mb-2">安全提示</h3>
-            <p className="text-indigo-100 text-sm mb-4">
-              请定期更新密码，确保账户安全。建议使用强密码并启用双重认证。
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
+            <p className="text-amber-300 text-sm">
+              API Key 仅存储在本地浏览器中，不会上传到服务器。请妥善保管您的密钥，不要分享给他人。
             </p>
-            <button className="w-full px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition text-sm">
-              修改密码
-            </button>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">平台信息</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">版本</span>
-                <span className="text-gray-800">1.0.0</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">上次更新</span>
-                <span className="text-gray-800">2026-05-23</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">服务状态</span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  <span className="text-green-600">正常</span>
-                </span>
-              </div>
-            </div>
           </div>
         </div>
       </div>

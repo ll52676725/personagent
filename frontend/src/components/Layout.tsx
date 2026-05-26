@@ -3,13 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '@/api';
 import { 
   LayoutDashboard, 
-  BookOpen, 
   Settings, 
   LogOut, 
-  Menu, 
-  X,
   User,
-  Sparkles
+  Sparkles,
+  PenTool,
+  Zap
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
@@ -18,10 +17,10 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { id: 'dashboard', label: '控制台', icon: LayoutDashboard },
-  { id: 'agents', label: 'Agent列表', icon: Sparkles },
-  { id: 'articles', label: '文章管理', icon: BookOpen },
-  { id: 'settings', label: '设置', icon: Settings },
+  { id: 'dashboard', label: '控制台', icon: LayoutDashboard, badge: '' },
+  { id: 'agents', label: 'Agent中心', icon: Sparkles, badge: '' },
+  { id: 'articles', label: '文章创作', icon: PenTool, badge: '新' },
+  { id: 'settings', label: '设置', icon: Settings, badge: '' },
 ];
 
 export default function Layout({ children }: LayoutProps) {
@@ -51,80 +50,124 @@ export default function Layout({ children }: LayoutProps) {
   const currentPath = location.pathname.replace(/^\//, '') || 'dashboard';
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen relative">
+      <div className="fixed inset-0 bg-grid opacity-30 pointer-events-none" />
+      <div className="fixed inset-0 bg-radial pointer-events-none" />
+      
       <aside 
-        className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-indigo-600 text-white transition-all duration-300 flex flex-col`}
+        className={`relative z-10 flex flex-col transition-all duration-500 ease-out ${
+          sidebarOpen ? 'w-72' : 'w-20'
+        }`}
       >
-        <div className="p-4 border-b border-indigo-500">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-              <Sparkles className="w-6 h-6" />
+        <div className="absolute inset-0 glass-card border-r" />
+        
+        <div className="relative p-6 border-b border-white/5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center glow-effect flex-shrink-0">
+              <Zap className="w-6 h-6 text-white" />
             </div>
             {sidebarOpen && (
-              <div>
-                <h1 className="font-bold text-lg">Agent平台</h1>
-                <p className="text-indigo-200 text-sm">智能助手</p>
+              <div className="overflow-hidden">
+                <h1 className="font-bold text-xl text-white tracking-tight">AgentAI</h1>
+                <p className="text-gray-400 text-sm">智能创作平台</p>
               </div>
             )}
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
-          {navItems.map((item) => {
+        <nav className="relative flex-1 p-4 space-y-2 overflow-y-auto scrollbar-thin">
+          {navItems.map((item, index) => {
             const Icon = item.icon;
-            const isActive = currentPath === item.id;
+            const isActive = currentPath.startsWith(item.id) || 
+              (item.id === 'dashboard' && currentPath === 'dashboard');
             return (
               <button
                 key={item.id}
                 onClick={() => navigate(item.id === 'dashboard' ? '/dashboard' : `/${item.id}`)}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition ${
-                  isActive 
-                    ? 'bg-white/20 text-white' 
-                    : 'text-indigo-200 hover:bg-white/10 hover:text-white'
-                }`}
+                className={`nav-item w-full animate-slideIn opacity-0`}
+                style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'forwards' }}
               >
-                <Icon className="w-5 h-5" />
-                {sidebarOpen && <span className="font-medium">{item.label}</span>}
+                <div className={`p-2 rounded-xl transition-all ${
+                  isActive 
+                    ? 'bg-gradient-to-br from-indigo-500 to-cyan-400 text-white' 
+                    : ''
+                }`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                {sidebarOpen && (
+                  <div className="flex-1 flex items-center justify-between">
+                    <span className="font-medium">{item.label}</span>
+                    {item.badge && (
+                      <span className="px-2 py-0.5 text-xs bg-gradient-to-r from-pink-500 to-orange-400 text-white rounded-full font-medium">
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
+                )}
               </button>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-indigo-500">
+        <div className="relative p-4 border-t border-white/5">
+          <div className="glass-card rounded-2xl p-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <User className="w-5 h-5 text-white" />
+              </div>
+              {sidebarOpen && (
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-white truncate">{user?.username || '用户'}</p>
+                  <p className="text-sm text-gray-400 truncate">{user?.email}</p>
+                </div>
+              )}
+            </div>
+          </div>
+          
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-indigo-200 hover:bg-white/10 hover:text-white transition"
+            className="nav-item w-full text-gray-400 hover:text-red-400"
           >
-            <LogOut className="w-5 h-5" />
+            <div className="p-2 rounded-xl hover:bg-red-500/10">
+              <LogOut className="w-5 h-5" />
+            </div>
             {sidebarOpen && <span className="font-medium">退出登录</span>}
           </button>
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col">
-        <header className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
+      <div className="flex-1 flex flex-col min-w-0 relative z-10">
+        <header className="glass-card mx-6 mt-6 mb-0 rounded-2xl px-6 py-4 flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-gray-100 transition"
+            className="p-3 rounded-xl hover:bg-white/5 transition-all duration-300"
           >
-            {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            <div className="w-6 h-5 relative flex flex-col justify-between">
+              <span className={`block h-0.5 bg-gray-400 rounded transition-all duration-300 ${
+                sidebarOpen ? 'rotate-45 translate-y-2' : ''
+              }`} />
+              <span className={`block h-0.5 bg-gray-400 rounded transition-all duration-300 ${
+                sidebarOpen ? 'opacity-0' : ''
+              }`} />
+              <span className={`block h-0.5 bg-gray-400 rounded transition-all duration-300 ${
+                sidebarOpen ? '-rotate-45 -translate-y-2' : ''
+              }`} />
+            </div>
           </button>
           
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-800">{user?.username}</p>
-                <p className="text-sm text-gray-500">{user?.email}</p>
-              </div>
+            <div className="hidden md:flex items-center gap-2 px-4 py-2 glass-card rounded-xl">
+              <Sparkles className="w-4 h-4 text-cyan-400" />
+              <span className="text-sm text-gray-300">AI 服务正常</span>
+              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
             </div>
           </div>
         </header>
 
-        <main className="flex-1 p-6">
-          {children}
+        <main className="flex-1 p-6 overflow-auto scrollbar-thin">
+          <div className="animate-fadeIn">
+            {children}
+          </div>
         </main>
       </div>
     </div>
