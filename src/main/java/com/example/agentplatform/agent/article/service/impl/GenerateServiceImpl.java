@@ -405,6 +405,47 @@ public class GenerateServiceImpl implements GenerateService {
         }
     }
     
+    @Override
+    public Flux<String> generateWithPromptStream(String systemPrompt, String userPrompt) {
+        try {
+            return streamChatApi(systemPrompt, userPrompt);
+        } catch (Exception e) {
+            log.error("流式生成内容失败", e);
+            if (fallbackEnabled) {
+                return Flux.just("[FALLBACK] 流式生成功能需要配置API Key");
+            }
+            return Flux.error(new BusinessException("生成失败：" + e.getMessage()));
+        }
+    }
+
+    @Override
+    public GenerateResult generateWithPrompt(String systemPrompt, String userPrompt, String type) {
+        try {
+            OpenAiDTO.ChatResponse response = callChatApi(systemPrompt, userPrompt, false);
+            String content = response.getChoices().get(0).getMessage().getContent();
+            Integer tokens = response.getUsage() != null ? response.getUsage().getTotalTokens() : null;
+            
+            log.info("使用自定义Prompt生成内容成功，type: {}, token消耗: {}", type, tokens);
+            return GenerateResult.builder()
+                    .type(type)
+                    .content(content)
+                    .model(modelName)
+                    .tokens(tokens)
+                    .build();
+            
+        } catch (Exception e) {
+            log.error("使用自定义Prompt生成内容失败，type: {}", type, e);
+            if (fallbackEnabled) {
+                return GenerateResult.builder()
+                        .type(type)
+                        .content("降级模式：请配置API Key以获取真实AI生成内容")
+                        .model("fallback")
+                        .build();
+            }
+            throw new BusinessException("生成失败：" + e.getMessage());
+        }
+    }
+
     private OpenAiDTO.ChatResponse callChatApi(String systemPrompt, String userPrompt, boolean stream) {
         if (apiKey == null || apiKey.isEmpty()) {
             throw new BusinessException("OpenAI API Key 未配置，请在 application.yml 中配置 spring.ai.openai.api-key");

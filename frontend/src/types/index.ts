@@ -49,6 +49,7 @@ export interface AgentPermission {
 export interface Article {
   id: number;
   userId: number;
+  collectionId?: number;
   title: string;
   summary?: string;
   content?: string;
@@ -59,6 +60,34 @@ export interface Article {
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
+}
+
+export interface Collection {
+  id: number;
+  userId: number;
+  title: string;
+  coverImage?: string;
+  description?: string;
+  outlines?: string;
+  articleCount: number;
+  status: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OutlineItem {
+  title: string;
+  summary: string;
+  keyPoints: string;
+  order: number;
+}
+
+export interface CollectionOutline {
+  collectionId: number;
+  title: string;
+  summary: string;
+  content?: string;
+  outlines: OutlineItem[];
 }
 
 export interface GenerateResult {

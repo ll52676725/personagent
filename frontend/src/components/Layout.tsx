@@ -8,6 +8,7 @@ import {
   User,
   Sparkles,
   PenTool,
+  Layers,
   Zap
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -19,7 +20,8 @@ interface LayoutProps {
 const navItems = [
   { id: 'dashboard', label: '控制台', icon: LayoutDashboard, badge: '' },
   { id: 'agents', label: 'Agent中心', icon: Sparkles, badge: '' },
-  { id: 'articles', label: '文章创作', icon: PenTool, badge: '新' },
+  { id: 'articles', label: '文章创作', icon: PenTool, badge: '' },
+  { id: 'collections', label: '合集管理', icon: Layers, badge: '新' },
   { id: 'settings', label: '设置', icon: Settings, badge: '' },
 ];
 

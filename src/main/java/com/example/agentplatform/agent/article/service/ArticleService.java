@@ -17,4 +17,5 @@ public interface ArticleService {
     List<Article> listArticlesByUserId(Long userId);
     void deleteArticle(Long userId, Long articleId);
     Article publishArticle(Long userId, Long articleId, PublishDTO dto);
+    Article save(Article article);
 }

@@ -73,6 +73,7 @@ DROP TABLE IF EXISTS article;
 CREATE TABLE article (
     id            BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     user_id       BIGINT        NOT NULL COMMENT '用户ID',
+    collection_id BIGINT                 DEFAULT NULL COMMENT '合集ID',
     title         VARCHAR(256)  NOT NULL COMMENT '标题',
     summary       VARCHAR(1024)          DEFAULT NULL COMMENT '概要',
     content       LONGTEXT               DEFAULT NULL COMMENT '正文(Markdown)',
@@ -85,6 +86,7 @@ CREATE TABLE article (
     published_at  DATETIME               DEFAULT NULL COMMENT '发布时间',
     PRIMARY KEY (id),
     KEY idx_user_id (user_id),
+    KEY idx_collection_id (collection_id),
     KEY idx_status (status),
     KEY idx_created_at (created_at),
     KEY idx_user_status (user_id, status),
@@ -92,7 +94,27 @@ CREATE TABLE article (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章表';
 
 -- ------------------------------------------------------------
--- 5. 发布配置表 (多平台发布, 预留)
+-- 5. 文章合集表
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS article_collection;
+CREATE TABLE article_collection (
+    id            BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    user_id       BIGINT        NOT NULL COMMENT '用户ID',
+    title         VARCHAR(256)  NOT NULL COMMENT '合集标题',
+    cover_image   VARCHAR(256)           DEFAULT NULL COMMENT '封面图URL',
+    description   LONGTEXT               DEFAULT NULL COMMENT '合集描述',
+    outlines      JSON                   DEFAULT NULL COMMENT '文章大纲列表JSON',
+    article_count INT           NOT NULL DEFAULT 0 COMMENT '文章数量',
+    status        TINYINT       NOT NULL DEFAULT 0 COMMENT '状态: 0-草稿, 1-已完成',
+    created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_user_id (user_id),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章合集表';
+
+-- ------------------------------------------------------------
+-- 6. 发布配置表 (多平台发布, 预留)
 -- ------------------------------------------------------------
 DROP TABLE IF EXISTS publish_config;
 CREATE TABLE publish_config (

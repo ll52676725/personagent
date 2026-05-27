@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { LoginResult, Agent, Article, GenerateResult, Result } from '@/types';
+import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -149,6 +149,65 @@ export const articleApi = {
       platforms,
     });
     return response.data as Result<unknown>;
+  },
+};
+
+export const collectionApi = {
+  create: async (title: string, description?: string, coverImage?: string) => {
+    const response = await articleClient.post('/collections', {
+      title,
+      description,
+      coverImage,
+    });
+    return response.data as Result<Collection>;
+  },
+
+  getAll: async () => {
+    const response = await articleClient.get('/collections');
+    return response.data as Result<Collection[]>;
+  },
+
+  getById: async (id: number) => {
+    const response = await articleClient.get(`/collections/${id}`);
+    return response.data as Result<Collection>;
+  },
+
+  update: async (id: number, data: Partial<Pick<Collection, 'title' | 'description' | 'coverImage' | 'status'>>) => {
+    const response = await articleClient.put(`/collections/${id}`, data);
+    return response.data as Result<Collection>;
+  },
+
+  delete: async (id: number) => {
+    const response = await articleClient.delete(`/collections/${id}`);
+    return response.data as Result<void>;
+  },
+
+  generateOutlines: async (id: number, articleCount?: number, topic?: string, keywords?: string[]) => {
+    const response = await articleClient.post(`/collections/${id}/generate-outlines`, {
+      collectionId: id,
+      articleCount,
+      topic,
+      keywords,
+    });
+    return response.data as Result<CollectionOutline>;
+  },
+
+  saveOutlines: async (id: number, outlines: CollectionOutline) => {
+    const response = await articleClient.post(`/collections/${id}/outlines`, outlines);
+    return response.data as Result<Collection>;
+  },
+
+  generateArticle: async (id: number, outlineIndex: number) => {
+    const response = await articleClient.post(`/collections/${id}/articles`, {
+      collectionId: id,
+      outlineIndex,
+    });
+    return response.data as Result<Article>;
+  },
+
+  generateAllArticles: async (id: number) => {
+    const response = await articleClient.post(`/collections/${id}/articles/all`);
+    return response.data as Result<{ collectionId: number; articleCount: number; articles: Article[] }>;
   },
 };
 

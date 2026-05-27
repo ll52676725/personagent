@@ -8,6 +8,7 @@ import AgentList from '@/components/AgentList';
 import ArticleList from '@/components/ArticleList';
 import ArticleDetail from '@/components/ArticleDetail';
 import ArticleForm from '@/components/ArticleForm';
+import CollectionList from '@/components/CollectionList';
 import Settings from '@/components/Settings';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -39,6 +40,7 @@ export default function App() {
       <Route path="/articles/new" element={<ProtectedRoute><Layout><ArticleForm /></Layout></ProtectedRoute>} />
       <Route path="/articles/:id" element={<ProtectedRoute><Layout><ArticleDetail /></Layout></ProtectedRoute>} />
       <Route path="/articles/:id/edit" element={<ProtectedRoute><Layout><ArticleForm /></Layout></ProtectedRoute>} />
+      <Route path="/collections" element={<ProtectedRoute><Layout><CollectionList /></Layout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
       
       <Route path="*" element={<Navigate to="/dashboard" />} />

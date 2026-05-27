@@ -106,6 +106,12 @@ public class ArticleServiceImpl implements ArticleService {
     
     @Override
     @Transactional
+    public Article save(Article article) {
+        return articleRepository.save(article);
+    }
+
+    @Override
+    @Transactional
     public Article publishArticle(Long userId, Long articleId, PublishDTO dto) {
         Article article = articleRepository.findByIdAndUserId(articleId, userId)
                 .orElseThrow(() -> new BusinessException("文章不存在或无权操作"));

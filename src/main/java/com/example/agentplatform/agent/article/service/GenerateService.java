@@ -10,6 +10,10 @@ public interface GenerateService {
     GenerateResult generateContent(GenerateRequestDTO request);
     GenerateResult generateOutline(GenerateRequestDTO request);
     GenerateResult generateCoverImage(GenerateRequestDTO request);
+
+    GenerateResult generateWithPrompt(String systemPrompt, String userPrompt, String type);
+    
+    Flux<String> generateWithPromptStream(String systemPrompt, String userPrompt);
     
     Flux<String> generateTitleStream(GenerateRequestDTO request);
     Flux<String> generateSummaryStream(GenerateRequestDTO request);

@@ -24,7 +24,5 @@ public class UserRegisterDTO {
     private String email;
     
     @NotBlank(message = "密码不能为空")
-    @Size(min = 8, max = 32, message = "密码长度必须在8-32之间")
-    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$", message = "密码必须包含字母和数字")
     private String password;
 }
