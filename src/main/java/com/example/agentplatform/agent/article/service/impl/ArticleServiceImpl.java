@@ -93,6 +93,11 @@ public class ArticleServiceImpl implements ArticleService {
     public List<Article> listArticlesByUserId(Long userId) {
         return articleRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
+
+    @Override
+    public List<Article> listArticlesByCollectionId(Long userId, Long collectionId) {
+        return articleRepository.findByCollectionIdAndUserIdOrderByCreatedAtDesc(collectionId, userId);
+    }
     
     @Override
     @Transactional

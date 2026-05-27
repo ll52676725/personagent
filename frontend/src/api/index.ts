@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result } from '@/types';
+import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -250,6 +250,26 @@ export const generateApi = {
       style,
     });
     return response.data as Result<GenerateResult>;
+  },
+
+  sectionImages: async (request: SectionImageGenerateRequest) => {
+    const response = await articleClient.post('/generate/section-images', request);
+    return response.data as Result<{ images: SectionImageResult[]; imageCount: number; successCount: number }>;
+  },
+
+  insertImages: async (request: SectionImageGenerateRequest) => {
+    const response = await articleClient.post('/generate/insert-images', request);
+    return response.data as Result<{ content: string; images: SectionImageResult[]; imageCount: number; successCount: number }>;
+  },
+
+  getImageCache: async () => {
+    const response = await articleClient.get('/generate/image-cache');
+    return response.data as Result<{ cacheSize: number }>;
+  },
+
+  clearImageCache: async () => {
+    const response = await articleClient.delete('/generate/image-cache');
+    return response.data as Result<void>;
   },
 
   titleStream: (

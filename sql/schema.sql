@@ -114,21 +114,27 @@ CREATE TABLE article_collection (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章合集表';
 
 -- ------------------------------------------------------------
--- 6. 发布配置表 (多平台发布, 预留)
+-- 6. 发布配置表 (多平台发布账号配置)
 -- ------------------------------------------------------------
 DROP TABLE IF EXISTS publish_config;
 CREATE TABLE publish_config (
-    id         BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    user_id    BIGINT       NOT NULL COMMENT '用户ID',
-    platform   VARCHAR(32)  NOT NULL COMMENT '平台: csdn/juejin/zhihu 等',
-    api_key    VARCHAR(256)          DEFAULT NULL COMMENT 'API Key',
-    api_secret VARCHAR(256)          DEFAULT NULL COMMENT 'API Secret',
-    config     JSON                  DEFAULT NULL COMMENT '扩展配置',
-    created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    id             BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    user_id        BIGINT       NOT NULL COMMENT '用户ID',
+    platform       VARCHAR(32)  NOT NULL COMMENT '平台: csdn/juejin/zhihu 等',
+    account_name   VARCHAR(128)          DEFAULT NULL COMMENT '账号名称',
+    api_key        VARCHAR(512)          DEFAULT NULL COMMENT 'API Key',
+    api_secret     VARCHAR(512)          DEFAULT NULL COMMENT 'API Secret',
+    access_token   VARCHAR(1024)         DEFAULT NULL COMMENT '访问Token/Cookie',
+    refresh_token  VARCHAR(1024)         DEFAULT NULL COMMENT '刷新Token',
+    expires_at     DATETIME              DEFAULT NULL COMMENT '过期时间',
+    config         JSON                  DEFAULT NULL COMMENT '扩展配置JSON',
+    enabled        TINYINT      NOT NULL DEFAULT 1 COMMENT '是否启用: 0-禁用, 1-启用',
+    created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_user_platform (user_id, platform),
-    KEY idx_user_id (user_id)
+    KEY idx_user_id (user_id),
+    KEY idx_enabled (enabled)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='发布配置表';
 
 -- ------------------------------------------------------------

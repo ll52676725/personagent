@@ -28,9 +28,13 @@ export default function Dashboard() {
           articleApi.getAll(),
         ]);
         if (agentsRes.code === 200) setAgents(agentsRes.data);
-        if (articlesRes.code === 200) setArticles(articlesRes.data);
+        if (articlesRes.code === 200) {
+          const data = articlesRes.data as any;
+          setArticles(Array.isArray(data) ? data : data?.content || []);
+        }
       } catch (err) {
         console.error('Failed to fetch data:', err);
+        setLoading(false);
       } finally {
         setLoading(false);
       }

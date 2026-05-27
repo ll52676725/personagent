@@ -15,6 +15,7 @@ public interface ArticleService {
     Article getArticle(Long userId, Long articleId);
     Page<Article> listArticles(Long userId, Pageable pageable);
     List<Article> listArticlesByUserId(Long userId);
+    List<Article> listArticlesByCollectionId(Long userId, Long collectionId);
     void deleteArticle(Long userId, Long articleId);
     Article publishArticle(Long userId, Long articleId, PublishDTO dto);
     Article save(Article article);

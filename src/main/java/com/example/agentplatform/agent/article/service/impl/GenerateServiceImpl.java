@@ -2,25 +2,27 @@ package com.example.agentplatform.agent.article.service.impl;
 
 import com.example.agentplatform.agent.article.dto.GenerateRequestDTO;
 import com.example.agentplatform.agent.article.dto.GenerateResult;
-import com.example.agentplatform.agent.article.dto.OpenAiDTO;
 import com.example.agentplatform.agent.article.service.GenerateService;
 import com.example.agentplatform.common.exception.BusinessException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.ChatClient;
+import org.springframework.ai.chat.ChatResponse;
+import org.springframework.ai.chat.StreamingChatClient;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.image.Image;
+import org.springframework.ai.image.ImageClient;
+import org.springframework.ai.image.ImagePrompt;
+import org.springframework.ai.image.ImageResponse;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -31,29 +33,33 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class GenerateServiceImpl implements GenerateService {
-    
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private final ChatClient chatClient;
+    private final StreamingChatClient streamingChatClient;
+    private final ImageClient imageClient;
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
-    
-    @Value("${spring.ai.openai.api-key:}")
-    private String apiKey;
-    
-    @Value("${spring.ai.openai.base-url:https://api.openai.com}")
-    private String baseUrl;
-    
-    @Value("${spring.ai.openai.chat.options.model:gpt-4o-mini}")
-    private String defaultModel;
-    
-    @Value("${spring.ai.openai.chat.options.temperature:0.7}")
-    private Double temperature;
-    
-    @Value("${agent.platform.default-model:openai}")
+
+    @Value("${agent.platform.default-model:spring-ai}")
     private String modelName;
-    
+
     @Value("${agent.platform.ai.fallback-enabled:true}")
     private boolean fallbackEnabled;
-    
+
+    @Value("${agent.platform.image.provider:trae}")
+    private String imageProvider;
+
+    @Value("${agent.platform.image.providers.trae.enabled:true}")
+    private boolean traeImageEnabled;
+
+    @Value("${agent.platform.image.providers.trae.base-url:https://trae-api-cn.mchost.guru/api/ide/v1}")
+    private String traeImageBaseUrl;
+
+    @Value("${agent.platform.image.providers.trae.default-size:landscape_16_9}")
+    private String traeDefaultSize;
+
+    @Value("${agent.platform.image.providers.openai.enabled:false}")
+    private boolean openaiImageEnabled;
+
     private static final String TITLE_SYSTEM_PROMPT = """
         你是一个专业的技术文章标题生成专家，擅长为技术博客创作吸引人的标题。
         
@@ -67,7 +73,7 @@ public class GenerateServiceImpl implements GenerateService {
         
         只返回标题列表，不要有任何其他文字说明。
         """;
-    
+
     private static final String SUMMARY_SYSTEM_PROMPT = """
         你是一个专业的技术文章摘要写作专家。
         
@@ -81,7 +87,7 @@ public class GenerateServiceImpl implements GenerateService {
         
         只返回摘要内容，不要有任何其他说明。
         """;
-    
+
     private static final String OUTLINE_SYSTEM_PROMPT = """
         你是一个专业的技术文章架构师，擅长设计清晰的文章大纲。
         
@@ -101,7 +107,7 @@ public class GenerateServiceImpl implements GenerateService {
         
         只返回大纲内容，不要有任何其他说明。
         """;
-    
+
     private static final String CONTENT_SYSTEM_PROMPT = """
         你是一个资深技术作家，擅长撰写高质量的技术教程文章。
         
@@ -134,21 +140,22 @@ public class GenerateServiceImpl implements GenerateService {
     public GenerateResult generateTitle(GenerateRequestDTO request) {
         String topic = request.getTopic();
         String keywords = request.getKeywords() != null ? String.join(", ", request.getKeywords()) : "";
-        
+
         String userPrompt = String.format("""
             请为以下技术主题生成文章标题：
             主题：%s
             关键词：%s
             请生成 5 个不同风格的高质量技术文章标题。
             """, topic, keywords);
-        
+
         try {
-            OpenAiDTO.ChatResponse response = callChatApi(TITLE_SYSTEM_PROMPT, userPrompt, false);
-            String content = response.getChoices().get(0).getMessage().getContent();
-            Integer tokens = response.getUsage() != null ? response.getUsage().getTotalTokens() : null;
-            
+            ChatResponse response = callChatApi(TITLE_SYSTEM_PROMPT, userPrompt);
+            String content = response.getResult().getOutput().getContent();
+            Integer tokens = response.getMetadata().getUsage() != null ?
+                response.getMetadata().getUsage().getTotalTokens().intValue() : null;
+
             List<String> titles = parseListResponse(content);
-            
+
             log.info("为主题 '{}' 生成了 {} 个标题，token 消耗: {}", topic, titles.size(), tokens);
             return GenerateResult.builder()
                     .type("title")
@@ -156,7 +163,7 @@ public class GenerateServiceImpl implements GenerateService {
                     .model(modelName)
                     .tokens(tokens)
                     .build();
-            
+
         } catch (Exception e) {
             log.error("AI 生成标题失败，主题: {}", topic, e);
             if (fallbackEnabled) {
@@ -170,19 +177,20 @@ public class GenerateServiceImpl implements GenerateService {
     public GenerateResult generateSummary(GenerateRequestDTO request) {
         String title = request.getTitle();
         String content = request.getContent() != null ? request.getContent() : "";
-        
+
         String userPrompt = String.format("""
             请为以下技术文章撰写摘要：
             文章标题：%s
             文章内容（可选）：%s
             请生成一段 100-200 字的专业技术文章摘要。
             """, title, content);
-        
+
         try {
-            OpenAiDTO.ChatResponse response = callChatApi(SUMMARY_SYSTEM_PROMPT, userPrompt, false);
-            String summary = response.getChoices().get(0).getMessage().getContent();
-            Integer tokens = response.getUsage() != null ? response.getUsage().getTotalTokens() : null;
-            
+            ChatResponse response = callChatApi(SUMMARY_SYSTEM_PROMPT, userPrompt);
+            String summary = response.getResult().getOutput().getContent();
+            Integer tokens = response.getMetadata().getUsage() != null ?
+                response.getMetadata().getUsage().getTotalTokens().intValue() : null;
+
             log.info("为文章 '{}' 生成了摘要，token 消耗: {}", title, tokens);
             return GenerateResult.builder()
                     .type("summary")
@@ -190,7 +198,7 @@ public class GenerateServiceImpl implements GenerateService {
                     .model(modelName)
                     .tokens(tokens)
                     .build();
-            
+
         } catch (Exception e) {
             log.error("AI 生成摘要失败，标题: {}", title, e);
             if (fallbackEnabled) {
@@ -204,10 +212,10 @@ public class GenerateServiceImpl implements GenerateService {
     public GenerateResult generateContent(GenerateRequestDTO request) {
         String title = request.getTitle();
         String outline = request.getOutline() != null ? request.getOutline() : "";
-        
-        String outlineSection = outline.isEmpty() ? "" : 
+
+        String outlineSection = outline.isEmpty() ? "" :
             String.format("\n参考大纲（可优化）：%s\n", outline);
-        
+
         String userPrompt = String.format("""
             请撰写一篇完整的技术文章，标题为：%s
             %s
@@ -217,12 +225,13 @@ public class GenerateServiceImpl implements GenerateService {
             - 内容不少于 1500 字
             - 使用 Markdown 格式，适配头条平台
             """, title, outlineSection);
-        
+
         try {
-            OpenAiDTO.ChatResponse response = callChatApi(CONTENT_SYSTEM_PROMPT, userPrompt, false);
-            String content = response.getChoices().get(0).getMessage().getContent();
-            Integer tokens = response.getUsage() != null ? response.getUsage().getTotalTokens() : null;
-            
+            ChatResponse response = callChatApi(CONTENT_SYSTEM_PROMPT, userPrompt);
+            String content = response.getResult().getOutput().getContent();
+            Integer tokens = response.getMetadata().getUsage() != null ?
+                response.getMetadata().getUsage().getTotalTokens().intValue() : null;
+
             log.info("为文章 '{}' 生成了正文内容，token 消耗: {}", title, tokens);
             return GenerateResult.builder()
                     .type("content")
@@ -230,7 +239,7 @@ public class GenerateServiceImpl implements GenerateService {
                     .model(modelName)
                     .tokens(tokens)
                     .build();
-            
+
         } catch (Exception e) {
             log.error("AI 生成正文失败，标题: {}", title, e);
             if (fallbackEnabled) {
@@ -244,19 +253,20 @@ public class GenerateServiceImpl implements GenerateService {
     public GenerateResult generateOutline(GenerateRequestDTO request) {
         String topic = request.getTopic();
         String keywords = request.getKeywords() != null ? String.join(", ", request.getKeywords()) : "";
-        
+
         String userPrompt = String.format("""
             请为以下技术主题设计文章大纲：
             主题：%s
             关键词：%s
             请设计一个结构清晰、逻辑严谨的技术文章大纲。
             """, topic, keywords);
-        
+
         try {
-            OpenAiDTO.ChatResponse response = callChatApi(OUTLINE_SYSTEM_PROMPT, userPrompt, false);
-            String content = response.getChoices().get(0).getMessage().getContent();
-            Integer tokens = response.getUsage() != null ? response.getUsage().getTotalTokens() : null;
-            
+            ChatResponse response = callChatApi(OUTLINE_SYSTEM_PROMPT, userPrompt);
+            String content = response.getResult().getOutput().getContent();
+            Integer tokens = response.getMetadata().getUsage() != null ?
+                response.getMetadata().getUsage().getTotalTokens().intValue() : null;
+
             log.info("为主题 '{}' 生成了大纲，token 消耗: {}", topic, tokens);
             return GenerateResult.builder()
                     .type("outline")
@@ -264,7 +274,7 @@ public class GenerateServiceImpl implements GenerateService {
                     .model(modelName)
                     .tokens(tokens)
                     .build();
-            
+
         } catch (Exception e) {
             log.error("AI 生成大纲失败，主题: {}", topic, e);
             if (fallbackEnabled) {
@@ -278,7 +288,7 @@ public class GenerateServiceImpl implements GenerateService {
     public GenerateResult generateCoverImage(GenerateRequestDTO request) {
         String title = request.getTitle();
         String style = request.getStyle() != null ? request.getStyle() : "professional";
-        
+
         String prompt = String.format(
             "Create a professional cover image for a technical article titled '%s'. " +
             "Style: %s. The image should be modern, clean, and suitable for a tech blog. " +
@@ -286,18 +296,18 @@ public class GenerateServiceImpl implements GenerateService {
             "Use a professional color scheme with blues and purples. No text in the image.",
             title, style
         );
-        
+
         try {
-            OpenAiDTO.ImageResponse response = callImageApi(prompt);
-            String imageUrl = response.getData().get(0).getUrl();
-            
+            ImageResponse response = callImageApi(prompt);
+            String imageUrl = response.getResult().getOutput().getUrl();
+
             log.info("为文章 '{}' 生成了封面图", title);
             return GenerateResult.builder()
                     .type("cover-image")
                     .content(imageUrl)
-                    .model("dall-e-3")
+                    .model(modelName)
                     .build();
-            
+
         } catch (Exception e) {
             log.error("AI 生成封面图失败，标题: {}", title, e);
             if (fallbackEnabled) {
@@ -311,14 +321,14 @@ public class GenerateServiceImpl implements GenerateService {
     public Flux<String> generateTitleStream(GenerateRequestDTO request) {
         String topic = request.getTopic();
         String keywords = request.getKeywords() != null ? String.join(", ", request.getKeywords()) : "";
-        
+
         String userPrompt = String.format("""
             请为以下技术主题生成文章标题：
             主题：%s
             关键词：%s
             请生成 5 个不同风格的高质量技术文章标题。
             """, topic, keywords);
-        
+
         try {
             return streamChatApi(TITLE_SYSTEM_PROMPT, userPrompt);
         } catch (Exception e) {
@@ -334,14 +344,14 @@ public class GenerateServiceImpl implements GenerateService {
     public Flux<String> generateSummaryStream(GenerateRequestDTO request) {
         String title = request.getTitle();
         String content = request.getContent() != null ? request.getContent() : "";
-        
+
         String userPrompt = String.format("""
             请为以下技术文章撰写摘要：
             文章标题：%s
             文章内容（可选）：%s
             请生成一段 100-200 字的专业技术文章摘要。
             """, title, content);
-        
+
         try {
             return streamChatApi(SUMMARY_SYSTEM_PROMPT, userPrompt);
         } catch (Exception e) {
@@ -357,10 +367,10 @@ public class GenerateServiceImpl implements GenerateService {
     public Flux<String> generateContentStream(GenerateRequestDTO request) {
         String title = request.getTitle();
         String outline = request.getOutline() != null ? request.getOutline() : "";
-        
-        String outlineSection = outline.isEmpty() ? "" : 
+
+        String outlineSection = outline.isEmpty() ? "" :
             String.format("\n参考大纲（可优化）：%s\n", outline);
-        
+
         String userPrompt = String.format("""
             请撰写一篇完整的技术文章，标题为：%s
             %s
@@ -370,7 +380,7 @@ public class GenerateServiceImpl implements GenerateService {
             - 内容不少于 1500 字
             - 使用 Markdown 格式，适配头条平台
             """, title, outlineSection);
-        
+
         try {
             return streamChatApi(CONTENT_SYSTEM_PROMPT, userPrompt);
         } catch (Exception e) {
@@ -386,14 +396,14 @@ public class GenerateServiceImpl implements GenerateService {
     public Flux<String> generateOutlineStream(GenerateRequestDTO request) {
         String topic = request.getTopic();
         String keywords = request.getKeywords() != null ? String.join(", ", request.getKeywords()) : "";
-        
+
         String userPrompt = String.format("""
             请为以下技术主题设计文章大纲：
             主题：%s
             关键词：%s
             请设计一个结构清晰、逻辑严谨的技术文章大纲。
             """, topic, keywords);
-        
+
         try {
             return streamChatApi(OUTLINE_SYSTEM_PROMPT, userPrompt);
         } catch (Exception e) {
@@ -404,7 +414,7 @@ public class GenerateServiceImpl implements GenerateService {
             return Flux.error(new BusinessException("大纲生成失败：" + e.getMessage()));
         }
     }
-    
+
     @Override
     public Flux<String> generateWithPromptStream(String systemPrompt, String userPrompt) {
         try {
@@ -421,10 +431,11 @@ public class GenerateServiceImpl implements GenerateService {
     @Override
     public GenerateResult generateWithPrompt(String systemPrompt, String userPrompt, String type) {
         try {
-            OpenAiDTO.ChatResponse response = callChatApi(systemPrompt, userPrompt, false);
-            String content = response.getChoices().get(0).getMessage().getContent();
-            Integer tokens = response.getUsage() != null ? response.getUsage().getTotalTokens() : null;
-            
+            ChatResponse response = callChatApi(systemPrompt, userPrompt);
+            String content = response.getResult().getOutput().getContent();
+            Integer tokens = response.getMetadata().getUsage() != null ?
+                response.getMetadata().getUsage().getTotalTokens().intValue() : null;
+
             log.info("使用自定义Prompt生成内容成功，type: {}, token消耗: {}", type, tokens);
             return GenerateResult.builder()
                     .type(type)
@@ -432,7 +443,7 @@ public class GenerateServiceImpl implements GenerateService {
                     .model(modelName)
                     .tokens(tokens)
                     .build();
-            
+
         } catch (Exception e) {
             log.error("使用自定义Prompt生成内容失败，type: {}", type, e);
             if (fallbackEnabled) {
@@ -446,136 +457,36 @@ public class GenerateServiceImpl implements GenerateService {
         }
     }
 
-    private OpenAiDTO.ChatResponse callChatApi(String systemPrompt, String userPrompt, boolean stream) {
-        if (apiKey == null || apiKey.isEmpty()) {
-            throw new BusinessException("OpenAI API Key 未配置，请在 application.yml 中配置 spring.ai.openai.api-key");
-        }
-        
-        String url = baseUrl + "/v1/chat/completions";
-        
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(apiKey);
-        
-        List<OpenAiDTO.Message> messages = List.of(
-            OpenAiDTO.Message.builder().role("system").content(systemPrompt).build(),
-            OpenAiDTO.Message.builder().role("user").content(userPrompt).build()
+    private ChatResponse callChatApi(String systemPrompt, String userPrompt) {
+        List<Message> messages = List.of(
+            new SystemMessage(systemPrompt),
+            new UserMessage(userPrompt)
         );
-        
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", defaultModel);
-        requestBody.put("messages", messages);
-        requestBody.put("temperature", temperature);
-        requestBody.put("stream", stream);
-        
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-        
-        ResponseEntity<OpenAiDTO.ChatResponse> response = restTemplate.exchange(
-            url, HttpMethod.POST, entity, OpenAiDTO.ChatResponse.class
-        );
-        
-        return response.getBody();
+
+        Prompt prompt = new Prompt(messages);
+        return chatClient.call(prompt);
     }
-    
+
     private Flux<String> streamChatApi(String systemPrompt, String userPrompt) {
-        if (apiKey == null || apiKey.isEmpty()) {
-            return Flux.error(new BusinessException("OpenAI API Key 未配置，请在 application.yml 中配置 spring.ai.openai.api-key"));
-        }
-        
-        Sinks.Many<String> sink = Sinks.many().multicast().onBackpressureBuffer();
-        
-        executorService.submit(() -> {
-            try {
-                String url = baseUrl + "/v1/chat/completions";
-                
-                List<Map<String, String>> messages = List.of(
-                    Map.of("role", "system", "content", systemPrompt),
-                    Map.of("role", "user", "content", userPrompt)
-                );
-                
-                Map<String, Object> requestBody = new HashMap<>();
-                requestBody.put("model", defaultModel);
-                requestBody.put("messages", messages);
-                requestBody.put("temperature", temperature);
-                requestBody.put("stream", true);
-                
-                String jsonBody = objectMapper.writeValueAsString(requestBody);
-                
-                URL apiUrl = new URL(url);
-                HttpURLConnection connection = (HttpURLConnection) apiUrl.openConnection();
-                connection.setRequestMethod("POST");
-                connection.setRequestProperty("Content-Type", "application/json");
-                connection.setRequestProperty("Authorization", "Bearer " + apiKey);
-                connection.setDoOutput(true);
-                connection.setConnectTimeout(30000);
-                connection.setReadTimeout(300000);
-                
-                try (var os = connection.getOutputStream()) {
-                    byte[] input = jsonBody.getBytes(StandardCharsets.UTF_8);
-                    os.write(input, 0, input.length);
-                }
-                
-                int responseCode = connection.getResponseCode();
-                if (responseCode != 200) {
-                    InputStream errorStream = connection.getErrorStream();
-                    String errorMessage = new String(errorStream.readAllBytes(), StandardCharsets.UTF_8);
-                    log.error("AI API 错误: {}", errorMessage);
-                    
-                    JsonNode errorNode = objectMapper.readTree(errorMessage);
-                    String msg = errorNode.path("error").path("message").asText("API 调用失败");
-                    
-                    if (fallbackEnabled) {
-                        sink.tryEmitNext("[FALLBACK]");
-                        sink.tryEmitComplete();
-                    } else {
-                        sink.tryEmitError(new BusinessException(msg));
-                    }
-                    return;
-                }
-                
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        if (line.startsWith("data: ")) {
-                            String data = line.substring(6);
-                            if ("[DONE]".equals(data)) {
-                                break;
-                            }
-                            try {
-                                JsonNode node = objectMapper.readTree(data);
-                                String content = node.path("choices").get(0)
-                                        .path("delta").path("content").asText();
-                                if (!content.isEmpty()) {
-                                    sink.tryEmitNext(content);
-                                }
-                            } catch (Exception e) {
-                                log.debug("解析 SSE 数据失败: {}", data);
-                            }
-                        }
-                    }
-                }
-                
-                sink.tryEmitComplete();
-                
-            } catch (Exception e) {
-                log.error("流式调用 AI API 失败", e);
-                if (fallbackEnabled) {
-                    sink.tryEmitNext("[FALLBACK]");
-                    sink.tryEmitComplete();
-                } else {
-                    sink.tryEmitError(new BusinessException("生成失败：" + e.getMessage()));
-                }
-            }
-        });
-        
-        return sink.asFlux();
+        List<Message> messages = List.of(
+            new SystemMessage(systemPrompt),
+            new UserMessage(userPrompt)
+        );
+
+        Prompt prompt = new Prompt(messages);
+
+        return streamingChatClient.stream(prompt)
+            .map(response -> {
+                String content = response.getResult().getOutput().getContent();
+                return content != null ? content : "";
+            })
+            .filter(content -> !content.isEmpty());
     }
-    
+
     private Flux<String> fallbackStream(GenerateResult result) {
-        String content = result.getContent() != null ? result.getContent() : 
+        String content = result.getContent() != null ? result.getContent() :
             (result.getItems() != null ? String.join("\n", result.getItems()) : "");
-        
+
         return Flux.create(sink -> {
             executorService.submit(() -> {
                 try {
@@ -591,34 +502,53 @@ public class GenerateServiceImpl implements GenerateService {
             });
         });
     }
-    
-    private OpenAiDTO.ImageResponse callImageApi(String prompt) {
-        if (apiKey == null || apiKey.isEmpty()) {
-            throw new BusinessException("OpenAI API Key 未配置");
-        }
-        
-        String url = baseUrl + "/v1/images/generations";
-        
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(apiKey);
-        
-        OpenAiDTO.ImageRequest requestBody = OpenAiDTO.ImageRequest.builder()
-                .model("dall-e-3")
-                .prompt(prompt)
-                .n(1)
-                .size("1792x1024")
-                .build();
-        
-        HttpEntity<OpenAiDTO.ImageRequest> entity = new HttpEntity<>(requestBody, headers);
-        
-        ResponseEntity<OpenAiDTO.ImageResponse> response = restTemplate.exchange(
-            url, HttpMethod.POST, entity, OpenAiDTO.ImageResponse.class
-        );
-        
-        return response.getBody();
+
+    private ImageResponse callImageApi(String prompt) {
+        return switch (imageProvider.toLowerCase()) {
+            case "trae" -> callTraeImageApi(prompt);
+            case "openai" -> callOpenAiImageApi(prompt);
+            default -> {
+                log.warn("未配置的图片生成 provider: {}, 默认使用 trae", imageProvider);
+                yield callTraeImageApi(prompt);
+            }
+        };
     }
-    
+
+    private ImageResponse callTraeImageApi(String prompt) {
+        if (!traeImageEnabled) {
+            throw new BusinessException("Trae 图片生成服务未启用");
+        }
+
+        try {
+            String encodedPrompt = URLEncoder.encode(prompt, StandardCharsets.UTF_8.toString());
+            String imageUrl = String.format("%s/text_to_image?prompt=%s&image_size=%s",
+                    traeImageBaseUrl, encodedPrompt, traeDefaultSize);
+
+            log.info("使用 Trae API 生成图片: prompt={}", prompt.substring(0, Math.min(50, prompt.length())) + "...");
+
+            Image image = new Image(imageUrl, prompt);
+            return new ImageResponse(List.of(new org.springframework.ai.image.ImageGeneration(image)));
+        } catch (Exception e) {
+            log.error("Trae 图片生成失败", e);
+            throw new BusinessException("Trae 图片生成失败: " + e.getMessage());
+        }
+    }
+
+    private ImageResponse callOpenAiImageApi(String prompt) {
+        if (!openaiImageEnabled) {
+            throw new BusinessException("Spring AI 图片生成服务未启用");
+        }
+
+        try {
+            log.info("使用 Spring AI 生成图片: prompt={}", prompt.substring(0, Math.min(50, prompt.length())) + "...");
+            ImagePrompt imagePrompt = new ImagePrompt(prompt);
+            return imageClient.call(imagePrompt);
+        } catch (Exception e) {
+            log.error("Spring AI 图片生成失败", e);
+            throw new BusinessException("Spring AI 图片生成失败: " + e.getMessage());
+        }
+    }
+
     private List<String> parseListResponse(String content) {
         List<String> items = new ArrayList<>();
         String[] lines = content.split("\n");
@@ -634,7 +564,7 @@ public class GenerateServiceImpl implements GenerateService {
         }
         return items.isEmpty() ? List.of(content.trim()) : items;
     }
-    
+
     private GenerateResult fallbackGenerateTitle(GenerateRequestDTO request) {
         String topic = request.getTopic();
         String simulatedTitles = String.format(
@@ -645,12 +575,12 @@ public class GenerateServiceImpl implements GenerateService {
             "%s最佳实践与技巧",
             topic, topic, topic, topic, topic
         );
-        
+
         List<String> titles = Arrays.stream(simulatedTitles.split("\n"))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
-        
+
         log.warn("降级模式：为主题 '{}' 生成了 {} 个模拟标题", topic, titles.size());
         return GenerateResult.builder()
                 .type("title")
@@ -658,7 +588,7 @@ public class GenerateServiceImpl implements GenerateService {
                 .model("fallback")
                 .build();
     }
-    
+
     private GenerateResult fallbackGenerateSummary(GenerateRequestDTO request) {
         String title = request.getTitle();
         String summary = String.format(
@@ -666,7 +596,7 @@ public class GenerateServiceImpl implements GenerateService {
             "文章涵盖了基础原理、核心特性、实践技巧等多个方面，适合有一定基础的开发者学习参考。",
             title
         );
-        
+
         log.warn("降级模式：为文章 '{}' 生成了模拟摘要", title);
         return GenerateResult.builder()
                 .type("summary")
@@ -674,7 +604,7 @@ public class GenerateServiceImpl implements GenerateService {
                 .model("fallback")
                 .build();
     }
-    
+
     private GenerateResult fallbackGenerateContent(GenerateRequestDTO request) {
         String title = request.getTitle();
         String content = String.format(
@@ -701,7 +631,7 @@ public class GenerateServiceImpl implements GenerateService {
             "通过本文的学习，相信你已经对%s有了全面的了解。希望这些知识能够帮助你在实际项目中更好地应用%s技术。",
             title, title, title, title, title, title
         );
-        
+
         log.warn("降级模式：为文章 '{}' 生成了模拟正文", title);
         return GenerateResult.builder()
                 .type("content")
@@ -709,7 +639,7 @@ public class GenerateServiceImpl implements GenerateService {
                 .model("fallback")
                 .build();
     }
-    
+
     private GenerateResult fallbackGenerateOutline(GenerateRequestDTO request) {
         String topic = request.getTopic();
         String outline = String.format(
@@ -737,7 +667,7 @@ public class GenerateServiceImpl implements GenerateService {
             "### 6.2 未来发展方向",
             topic, topic, topic
         );
-        
+
         log.warn("降级模式：为主题 '{}' 生成了模拟大纲", topic);
         return GenerateResult.builder()
                 .type("outline")
@@ -745,14 +675,14 @@ public class GenerateServiceImpl implements GenerateService {
                 .model("fallback")
                 .build();
     }
-    
+
     private GenerateResult fallbackGenerateCoverImage(GenerateRequestDTO request) {
         String title = request.getTitle();
         String placeholderUrl = String.format(
             "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=%s&image_size=landscape_16_9",
             java.net.URLEncoder.encode(title, java.nio.charset.StandardCharsets.UTF_8)
         );
-        
+
         log.warn("降级模式：为文章 '{}' 使用占位封面图", title);
         return GenerateResult.builder()
                 .type("cover-image")

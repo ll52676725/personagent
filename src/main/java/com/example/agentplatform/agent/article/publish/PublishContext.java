@@ -2,6 +2,7 @@ package com.example.agentplatform.agent.article.publish;
 
 import com.example.agentplatform.agent.article.config.PlatformType;
 import com.example.agentplatform.agent.article.entity.Article;
+import com.example.agentplatform.agent.article.entity.PublishConfig;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,4 +26,5 @@ public class PublishContext {
     private PlatformType targetPlatform;
     private String userId;
     private String token;
+    private PublishConfig publishConfig;
 }

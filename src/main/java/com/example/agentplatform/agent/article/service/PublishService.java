@@ -4,6 +4,7 @@ import com.example.agentplatform.agent.article.config.PlatformType;
 import com.example.agentplatform.agent.article.dto.PublishDTO;
 import com.example.agentplatform.agent.article.dto.PublishResult;
 import com.example.agentplatform.agent.article.entity.Article;
+import com.example.agentplatform.agent.article.entity.PublishConfig;
 import com.example.agentplatform.agent.article.publish.PlatformPublisher;
 import com.example.agentplatform.agent.article.publish.PublishContext;
 import com.example.agentplatform.common.exception.BusinessException;
@@ -12,8 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -24,6 +27,7 @@ public class PublishService {
     private final List<PlatformPublisher> publishers;
     private final ArticleService articleService;
     private final ImageGenerationService imageGenerationService;
+    private final PublishConfigService publishConfigService;
 
     public List<PublishResult> publishArticle(Long userId, Long articleId, PublishDTO dto) {
         Article article = articleService.getArticle(userId, articleId);
@@ -43,7 +47,15 @@ public class PublishService {
                     continue;
                 }
 
-                PublishContext context = buildPublishContext(article, platform, dto);
+                Optional<PublishConfig> configOpt = publishConfigService
+                        .getEnabledConfig(userId, platform.getCode());
+                if (configOpt.isEmpty()) {
+                    results.add(PublishResult.failure(platform,
+                            "未配置" + platform.getName() + "账号信息，请先在发布设置中配置"));
+                    continue;
+                }
+
+                PublishContext context = buildPublishContext(article, platform, dto, configOpt.get());
                 PublishResult result = publisher.publish(context);
                 results.add(result);
 
@@ -59,12 +71,31 @@ public class PublishService {
 
     public List<PublishResult> autoPublish(Long userId, Long articleId) {
         Article article = articleService.getArticle(userId, articleId);
+
+        List<PublishConfig> enabledConfigs = publishConfigService.listEnabledConfigs(userId);
+        List<String> platforms = enabledConfigs.stream()
+                .map(PublishConfig::getPlatform)
+                .collect(Collectors.toList());
+
+        if (platforms.isEmpty()) {
+            throw new BusinessException("未配置任何发布平台，请先在发布设置中配置账号信息");
+        }
+
         PublishDTO dto = PublishDTO.builder()
-                .platforms(List.of("csdn", "toutiao", "zhihu"))
+                .platforms(platforms)
                 .tags(article.getTags() != null ? List.of(article.getTags().split(",")) : List.of())
                 .isOriginal(true)
                 .build();
         return publishArticle(userId, articleId, dto);
+    }
+
+    public Map<String, Boolean> checkPublishConfigs(Long userId) {
+        PlatformType[] platformTypes = PlatformType.values();
+        return Arrays.stream(platformTypes)
+                .collect(Collectors.toMap(
+                        PlatformType::getCode,
+                        platform -> publishConfigService.isConfigEnabled(userId, platform.getCode())
+                ));
     }
 
     public String previewForPlatform(Long userId, Long articleId, String platformCode) {
@@ -135,7 +166,8 @@ public class PublishService {
         return null;
     }
 
-    private PublishContext buildPublishContext(Article article, PlatformType platform, PublishDTO dto) {
+    private PublishContext buildPublishContext(Article article, PlatformType platform, PublishDTO dto,
+                                               PublishConfig config) {
         return PublishContext.builder()
                 .article(article)
                 .platformContent(article.getContent())
@@ -147,7 +179,13 @@ public class PublishService {
                 .isOriginal(dto != null && dto.getIsOriginal() != null ? dto.getIsOriginal() : true)
                 .targetPlatform(platform)
                 .userId(String.valueOf(article.getUserId()))
+                .token(config != null ? config.getAccessToken() : null)
+                .publishConfig(config)
                 .build();
+    }
+
+    private PublishContext buildPublishContext(Article article, PlatformType platform, PublishDTO dto) {
+        return buildPublishContext(article, platform, dto, null);
     }
 
     private void updateArticleAfterPublish(Article article, List<PublishResult> results) {

@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
   一键启动「个人Agent平台」(AgentPlatform)
@@ -73,7 +73,7 @@ function Start-Backend {
     Write-Host "[后端] 启动 $ServiceDisplayName -> http://localhost:$Port" -ForegroundColor Yellow
     Push-Location $BackendRoot
     $env:MAVEN_OPTS = "-Dfile.encoding=UTF-8"
-    & $MavenExe spring-boot:run "-Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8"
+    & $MavenExe -s .mvn/settings.xml spring-boot:run "-Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8"
     Pop-Location
 }
 
@@ -86,7 +86,7 @@ function Start-DevMode {
         param($Root, $Mvn)
         Set-Location $Root
         $env:MAVEN_OPTS = "-Dfile.encoding=UTF-8"
-        & $Mvn spring-boot:run "-Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8" 2>&1
+        & $Mvn -s .mvn/settings.xml spring-boot:run "-Dspring-boot.run.jvmArguments=-Dfile.encoding=UTF-8" 2>&1
     } -ArgumentList $BackendRoot, $MavenExe
 
     Start-Sleep -Seconds 8

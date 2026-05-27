@@ -35,6 +35,9 @@ spring:
         options:
           model: deepseek-v4-flash
           temperature: 0.7
+      image:
+        options:
+          model: dall-e-3
 
 agent:
   platform:
@@ -42,10 +45,30 @@ agent:
       secret: ${JWT_SECRET:agent-platform-secret-key-2026-abcdefghij}
       expiration: 86400
       refresh-expiration: 604800
-    default-model: openai
+    default-model: spring-ai
     ai:
       fallback-enabled: ${AI_FALLBACK_ENABLED:true}
     upload:
       path: ${UPLOAD_PATH:./uploads}
       allowed-types: image/jpeg,image/png,image/gif,image/webp
       max-size: 5242880
+    image:
+      provider: ${IMAGE_PROVIDER:trae}
+      parallel-threshold: 3
+      cache-enabled: true
+      providers:
+        trae:
+          enabled: true
+          base-url: https://trae-api-cn.mchost.guru/api/ide/v1
+          api-key: ${TRAE_API_KEY:}
+          default-size: landscape_16_9
+        openai:
+          enabled: ${OPENAI_IMAGE_ENABLED:false}
+          api-key: ${OPENAI_IMAGE_API_KEY:}
+          base-url: https://api.openai.com
+          model: dall-e-3
+          size: 1792x1024
+        other:
+          enabled: false
+          base-url: ${OTHER_IMAGE_API_URL:}
+          api-key: ${OTHER_IMAGE_API_KEY:}

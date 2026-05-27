@@ -98,6 +98,22 @@ export interface GenerateResult {
   tokens?: number;
 }
 
+export interface SectionImageResult {
+  sectionTitle: string;
+  imageUrl: string;
+  caption: string;
+  insertPosition: string;
+  success: boolean;
+}
+
+export interface SectionImageGenerateRequest {
+  articleTitle: string;
+  content: string;
+  platform?: string;
+  imageCount?: number;
+  style?: string;
+}
+
 export interface Result<T> {
   code: number;
   message: string;

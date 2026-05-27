@@ -3,8 +3,11 @@ package com.example.agentplatform.agent.article.controller;
 import com.example.agentplatform.agent.article.config.PlatformType;
 import com.example.agentplatform.agent.article.dto.GenerateRequestDTO;
 import com.example.agentplatform.agent.article.dto.GenerateResult;
+import com.example.agentplatform.agent.article.dto.SectionImageGenerateDTO;
+import com.example.agentplatform.agent.article.dto.SectionImageResult;
 import com.example.agentplatform.agent.article.service.ArticleGenerationService;
 import com.example.agentplatform.agent.article.service.GenerateService;
+import com.example.agentplatform.agent.article.service.ImageGenerationService;
 import com.example.agentplatform.common.security.SecurityUtils;
 import com.example.agentplatform.common.dto.Result;
 import com.example.agentplatform.common.exception.BusinessException;
@@ -16,7 +19,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -26,6 +31,7 @@ public class GenerateController {
     
     private final GenerateService generateService;
     private final ArticleGenerationService articleGenerationService;
+    private final ImageGenerationService imageGenerationService;
     
     @PostMapping("/generate/title")
     public ResponseEntity<Result<GenerateResult>> generateTitle(@Valid @RequestBody GenerateRequestDTO request) {
@@ -237,5 +243,73 @@ public class GenerateController {
     @GetMapping("/platforms")
     public ResponseEntity<Result<List<PlatformType>>> getSupportedPlatforms() {
         return ResponseEntity.ok(Result.success(List.of(PlatformType.values())));
+    }
+
+    @PostMapping("/generate/section-images")
+    public ResponseEntity<Result<Map<String, Object>>> generateSectionImages(
+            @Valid @RequestBody SectionImageGenerateDTO dto) {
+        Long userId = SecurityUtils.getCurrentUserId();
+
+        log.info("用户 {} 为文章 '{}' 生成阶段性插图", userId, dto.getArticleTitle());
+
+        PlatformType platformType = dto.getPlatform() != null ?
+                PlatformType.fromCode(dto.getPlatform()) : PlatformType.CSDN;
+
+        List<SectionImageResult> images = imageGenerationService.generateSectionImages(
+                dto.getContent(), dto.getArticleTitle(), platformType
+        );
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("images", images);
+        result.put("imageCount", images.size());
+        result.put("successCount", images.stream().filter(SectionImageResult::isSuccess).count());
+
+        return ResponseEntity.ok(Result.success("阶段性插图生成成功", result));
+    }
+
+    @PostMapping("/generate/insert-images")
+    public ResponseEntity<Result<Map<String, Object>>> generateAndInsertImages(
+            @Valid @RequestBody SectionImageGenerateDTO dto) {
+        Long userId = SecurityUtils.getCurrentUserId();
+
+        log.info("用户 {} 为文章 '{}' 生成并插入插图", userId, dto.getArticleTitle());
+
+        PlatformType platformType = dto.getPlatform() != null ?
+                PlatformType.fromCode(dto.getPlatform()) : PlatformType.CSDN;
+
+        String contentWithImages = imageGenerationService.insertImagesIntoMarkdown(
+                dto.getContent(), dto.getArticleTitle(), platformType
+        );
+
+        List<SectionImageResult> images = imageGenerationService.generateSectionImages(
+                dto.getContent(), dto.getArticleTitle(), platformType
+        );
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("content", contentWithImages);
+        result.put("images", images);
+        result.put("imageCount", images.size());
+        result.put("successCount", images.stream().filter(SectionImageResult::isSuccess).count());
+
+        return ResponseEntity.ok(Result.success("插图生成并插入成功", result));
+    }
+
+    @GetMapping("/generate/image-cache")
+    public ResponseEntity<Result<Map<String, Object>>> getImageCacheInfo() {
+        Long userId = SecurityUtils.getCurrentUserId();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("cacheSize", imageGenerationService.getCacheSize());
+
+        return ResponseEntity.ok(Result.success(result));
+    }
+
+    @DeleteMapping("/generate/image-cache")
+    public ResponseEntity<Result<Void>> clearImageCache() {
+        Long userId = SecurityUtils.getCurrentUserId();
+
+        imageGenerationService.clearCache();
+
+        return ResponseEntity.ok(Result.success("图片缓存已清空", null));
     }
 }
