@@ -58,5 +58,18 @@ public class DataInitializer implements CommandLineRunner {
             agentRepository.save(docAgent);
             log.info("初始化文档生成Agent");
         }
+
+        if (!agentRepository.existsByCode("knowledge")) {
+            Agent knowledgeAgent = Agent.builder()
+                    .name("个人知识库")
+                    .code("knowledge")
+                    .description("构建您的专属知识库，支持文档导入、智能问答、语义搜索")
+                    .moduleName("agent.knowledge")
+                    .icon("https://api.iconify.design/material-symbols/library-books.svg")
+                    .status(1)
+                    .build();
+            agentRepository.save(knowledgeAgent);
+            log.info("初始化个人知识库Agent");
+        }
     }
 }

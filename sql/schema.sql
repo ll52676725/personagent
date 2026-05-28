@@ -138,12 +138,77 @@ CREATE TABLE publish_config (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='发布配置表';
 
 -- ------------------------------------------------------------
+-- 7. 知识库表 (个人知识库 Agent)
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS knowledge_base;
+CREATE TABLE knowledge_base (
+    id              BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    user_id         BIGINT       NOT NULL COMMENT '用户ID',
+    name            VARCHAR(128) NOT NULL COMMENT '知识库名称',
+    description     VARCHAR(512)          DEFAULT NULL COMMENT '描述',
+    icon            VARCHAR(256)          DEFAULT NULL COMMENT '图标URL',
+    knowledge_count INT          NOT NULL DEFAULT 0 COMMENT '知识条目数',
+    chunk_count     INT          NOT NULL DEFAULT 0 COMMENT '向量分片数',
+    status          TINYINT      NOT NULL DEFAULT 1 COMMENT '状态: 0-禁用, 1-启用',
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_user_id (user_id),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='知识库表';
+
+-- ------------------------------------------------------------
+-- 8. 知识条目表 (个人知识库 Agent)
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS knowledge;
+CREATE TABLE knowledge (
+    id            BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    user_id       BIGINT        NOT NULL COMMENT '用户ID',
+    base_id       BIGINT        NOT NULL COMMENT '知识库ID',
+    title         VARCHAR(256)  NOT NULL COMMENT '知识标题',
+    content       LONGTEXT               DEFAULT NULL COMMENT '知识内容(Markdown)',
+    source_type   VARCHAR(32)            DEFAULT 'manual' COMMENT '来源类型: manual/file/url',
+    source_url    VARCHAR(512)           DEFAULT NULL COMMENT '来源URL',
+    tags          VARCHAR(512)           DEFAULT NULL COMMENT '标签,逗号分隔',
+    category      VARCHAR(64)            DEFAULT NULL COMMENT '分类',
+    chunk_status  TINYINT      NOT NULL DEFAULT 0 COMMENT '分片状态: 0-未处理, 1-处理中, 2-已完成, 3-失败',
+    chunk_count   INT          NOT NULL DEFAULT 0 COMMENT '分片数量',
+    created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_user_id (user_id),
+    KEY idx_base_id (base_id),
+    KEY idx_category (category),
+    KEY idx_chunk_status (chunk_status),
+    FULLTEXT KEY ft_title_content (title, content)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='知识条目表';
+
+-- ------------------------------------------------------------
+-- 9. 知识向量分片表 (个人知识库 Agent)
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS knowledge_chunk;
+CREATE TABLE knowledge_chunk (
+    id             BIGINT    NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    knowledge_id   BIGINT    NOT NULL COMMENT '知识条目ID',
+    base_id        BIGINT    NOT NULL COMMENT '知识库ID',
+    chunk_index    INT       NOT NULL COMMENT '分片序号',
+    content        TEXT      NOT NULL COMMENT '分片内容',
+    embedding      MEDIUMTEXT          DEFAULT NULL COMMENT '向量数据(JSON)',
+    token_count    INT                DEFAULT NULL COMMENT 'Token数量',
+    created_at     DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_knowledge_id (knowledge_id),
+    KEY idx_base_id (base_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='知识向量分片表';
+
+-- ------------------------------------------------------------
 -- 初始化 Agent 数据 (与 DataInitializer 一致, 可重复执行需先清空或改 INSERT IGNORE)
 -- ------------------------------------------------------------
 INSERT INTO sys_agent (name, code, description, module_name, icon, status) VALUES
 ('技术文章Agent', 'article', '帮助您生成高质量的技术文章，包括标题生成、概要生成、正文生成等功能', 'agent.article', 'https://api.iconify.design/material-symbols/article.svg', 1),
 ('代码审查Agent', 'code-review', '帮助您审查代码质量，发现潜在问题和安全漏洞', 'agent-code-review', 'https://api.iconify.design/material-symbols/code-review.svg', 1),
-('文档生成Agent', 'doc', '帮助您生成各类技术文档，如API文档、需求文档等', 'agent-doc', 'https://api.iconify.design/material-symbols/file-document.svg', 1)
+('文档生成Agent', 'doc', '帮助您生成各类技术文档，如API文档、需求文档等', 'agent-doc', 'https://api.iconify.design/material-symbols/file-document.svg', 1),
+('个人知识库', 'knowledge', '构建您的专属知识库，支持文档导入、智能问答、语义搜索', 'agent.knowledge', 'https://api.iconify.design/material-symbols/library-books.svg', 1)
 ON DUPLICATE KEY UPDATE
     name = VALUES(name),
     description = VALUES(description),

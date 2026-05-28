@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest } from '@/types';
+import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -12,6 +12,13 @@ const apiClient: AxiosInstance = axios.create({
 
 const articleClient: AxiosInstance = axios.create({
   baseURL: ARTICLE_BASE,
+  timeout: 120000,
+});
+
+const KNOWLEDGE_BASE = `${API_BASE}/agent-knowledge`;
+
+const knowledgeClient: AxiosInstance = axios.create({
+  baseURL: KNOWLEDGE_BASE,
   timeout: 120000,
 });
 
@@ -57,6 +64,8 @@ apiClient.interceptors.request.use(attachAuth);
 apiClient.interceptors.response.use(handleResponse, handleError);
 articleClient.interceptors.request.use(attachAuth);
 articleClient.interceptors.response.use(handleResponse, handleError);
+knowledgeClient.interceptors.request.use(attachAuth);
+knowledgeClient.interceptors.response.use(handleResponse, handleError);
 
 export const authApi = {
   register: async (username: string, email: string, password: string) => {
@@ -337,6 +346,132 @@ export const generateApi = {
   },
 };
 
+export const knowledgeApi = {
+  getBases: async () => {
+    const response = await knowledgeClient.get('/bases');
+    return response.data as Result<KnowledgeBase[]>;
+  },
+
+  createBase: async (name: string, description?: string, icon?: string) => {
+    const response = await knowledgeClient.post('/bases', { name, description, icon });
+    return response.data as Result<KnowledgeBase>;
+  },
+
+  getBase: async (id: number) => {
+    const response = await knowledgeClient.get(`/bases/${id}`);
+    return response.data as Result<KnowledgeBase>;
+  },
+
+  updateBase: async (id: number, data: { name?: string; description?: string; icon?: string }) => {
+    const response = await knowledgeClient.put(`/bases/${id}`, data);
+    return response.data as Result<KnowledgeBase>;
+  },
+
+  deleteBase: async (id: number) => {
+    const response = await knowledgeClient.delete(`/bases/${id}`);
+    return response.data as Result<void>;
+  },
+
+  getItems: async (baseId: number) => {
+    const response = await knowledgeClient.get(`/bases/${baseId}/items`);
+    return response.data as Result<KnowledgeItem[]>;
+  },
+
+  getAllItems: async () => {
+    const response = await knowledgeClient.get('/items');
+    return response.data as Result<KnowledgeItem[]>;
+  },
+
+  createItem: async (baseId: number, data: { title: string; content?: string; sourceType?: string; sourceUrl?: string; tags?: string; category?: string }) => {
+    const response = await knowledgeClient.post(`/bases/${baseId}/items`, data);
+    return response.data as Result<KnowledgeItem>;
+  },
+
+  getItem: async (id: number) => {
+    const response = await knowledgeClient.get(`/items/${id}`);
+    return response.data as Result<KnowledgeItem>;
+  },
+
+  updateItem: async (id: number, data: { title?: string; content?: string; tags?: string; category?: string }) => {
+    const response = await knowledgeClient.put(`/items/${id}`, data);
+    return response.data as Result<KnowledgeItem>;
+  },
+
+  deleteItem: async (id: number) => {
+    const response = await knowledgeClient.delete(`/items/${id}`);
+    return response.data as Result<void>;
+  },
+
+  importUrl: async (url: string, baseId: number, title?: string, category?: string, tags?: string) => {
+    const response = await knowledgeClient.post('/import/url', { url, baseId, title, category, tags });
+    return response.data as Result<KnowledgeItem>;
+  },
+
+  importFile: async (baseId: number, file: File, category?: string, tags?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('baseId', baseId.toString());
+    if (category) formData.append('category', category);
+    if (tags) formData.append('tags', tags);
+    const response = await knowledgeClient.post('/import/file', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as Result<KnowledgeItem>;
+  },
+
+  importFiles: async (baseId: number, files: File[], category?: string, tags?: string) => {
+    const formData = new FormData();
+    files.forEach(f => formData.append('files', f));
+    formData.append('baseId', baseId.toString());
+    if (category) formData.append('category', category);
+    if (tags) formData.append('tags', tags);
+    const response = await knowledgeClient.post('/import/files', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as Result<KnowledgeItem[]>;
+  },
+
+  reprocess: async (id: number) => {
+    const response = await knowledgeClient.post(`/items/${id}/reprocess`);
+    return response.data as Result<void>;
+  },
+
+  query: async (question: string, baseId?: number | null, topK?: number, similarityThreshold?: number) => {
+    const response = await knowledgeClient.post('/query', {
+      question,
+      baseId: baseId || undefined,
+      topK,
+      similarityThreshold,
+    });
+    return response.data as Result<KnowledgeQueryResult>;
+  },
+
+  queryStream: (
+    question: string,
+    baseId: number | null | undefined,
+    onChunk: (chunk: string) => void,
+    onComplete: () => void,
+    onError: (error: string) => void
+  ) => {
+    return streamKnowledgeQuery(
+      '/query/stream',
+      { question, baseId: baseId || undefined },
+      onChunk,
+      onComplete,
+      onError
+    );
+  },
+
+  search: async (keyword: string, baseId?: number | null, topK?: number) => {
+    const response = await knowledgeClient.post('/search', {
+      keyword,
+      baseId: baseId || undefined,
+      topK,
+    });
+    return response.data as Result<SourceReference[]>;
+  },
+};
+
 const getAuthHeader = (): Record<string, string> => {
   const token = localStorage.getItem('accessToken');
   const headers: Record<string, string> = {};
@@ -487,5 +622,76 @@ const streamGenerate = async (
   } catch (error: any) {
     console.error('Stream error:', error);
     onError(error.message || '生成失败，请稍后重试');
+  }
+};
+
+const streamKnowledgeQuery = async (
+  endpoint: string,
+  body: any,
+  onChunk: (chunk: string) => void,
+  onComplete: () => void,
+  onError: (error: string) => void
+) => {
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...getAuthHeader(),
+    } as Record<string, string>;
+
+    const response = await fetch(`${KNOWLEDGE_BASE}${endpoint}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = '查询失败';
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('无法读取响应流');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              onChunk(content);
+            }
+          } catch (e) {
+            onChunk(data);
+          }
+        }
+      }
+    }
+
+    onComplete();
+  } catch (error: any) {
+    console.error('Knowledge stream error:', error);
+    onError(error.message || '查询失败，请稍后重试');
   }
 };

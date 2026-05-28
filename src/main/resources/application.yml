@@ -30,7 +30,7 @@ spring:
   ai:
     openai:
       api-key: sk-65f0add49f514ee7ae2f38e3e5dc5bde
-      base-url: https://api.deepseek.com
+      base-url: https://api.deepseek.com/v1
       chat:
         options:
           model: deepseek-v4-flash
@@ -72,3 +72,43 @@ agent:
           enabled: false
           base-url: ${OTHER_IMAGE_API_URL:}
           api-key: ${OTHER_IMAGE_API_KEY:}
+    knowledge:
+      embedding:
+        # 注意：DeepSeek 官方不提供 Embedding API！请从以下 provider 中选择一个：
+        # zhipu: 智谱AI (推荐，国内服务快，中文效果好)
+        # openai: OpenAI
+        # qwen: 通义千问
+        # siliconflow: 硅基流动 (兼容 OpenAI 格式，支持多个模型)
+        provider: ${EMBEDDING_PROVIDER:zhipu}
+        dimensions: 1024
+        providers:
+          # 方案 1: 智谱AI (推荐)
+          # 申请地址: https://open.bigmodel.cn/
+          zhipu:
+            base-url: ${ZHIPU_BASE_URL:https://open.bigmodel.cn/api/paas/v4}
+            api-key: ${ZHIPU_API_KEY:your-zhipu-api-key}
+            model: ${ZHIPU_EMBEDDING_MODEL:embedding-3}
+            dimensions: 1024
+          # 方案 2: OpenAI
+          openai:
+            base-url: ${OPENAI_EMBEDDING_BASE_URL:https://api.openai.com/v1}
+            api-key: ${OPENAI_EMBEDDING_API_KEY:your-openai-api-key}
+            model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+            dimensions: 1536
+          # 方案 3: 通义千问
+          # 申请地址: https://dashscope.console.aliyun.com/
+          qwen:
+            base-url: ${QWEN_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+            api-key: ${QWEN_API_KEY:your-qwen-api-key}
+            model: ${QWEN_EMBEDDING_MODEL:text-embedding-v2}
+            dimensions: 1536
+          # 方案 4: 硅基流动 (支持多个开源模型)
+          # 申请地址: https://cloud.siliconflow.cn/
+          siliconflow:
+            base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn/v1}
+            api-key: ${SILICONFLOW_API_KEY:your-siliconflow-api-key}
+            model: ${SILICONFLOW_EMBEDDING_MODEL:BAAI/bge-m3}
+            dimensions: 1024
+      chunk:
+        size: 500
+        overlap: 50

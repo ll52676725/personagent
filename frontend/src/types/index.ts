@@ -150,3 +150,50 @@ export interface SettingsSection {
   inputFields?: InputField[];
   toggles?: ToggleField[];
 }
+
+export interface KnowledgeBase {
+  id: number;
+  userId: number;
+  name: string;
+  description?: string;
+  icon?: string;
+  knowledgeCount: number;
+  chunkCount: number;
+  status: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KnowledgeItem {
+  id: number;
+  userId: number;
+  baseId: number;
+  title: string;
+  content?: string;
+  sourceType: string;
+  sourceUrl?: string;
+  fileName?: string;
+  fileType?: string;
+  fileSize?: number;
+  tags?: string;
+  category?: string;
+  chunkStatus: number;
+  chunkCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KnowledgeQueryResult {
+  question: string;
+  answer: string;
+  sources: SourceReference[];
+  model?: string;
+  tokens?: number;
+}
+
+export interface SourceReference {
+  knowledgeId: number;
+  title: string;
+  content: string;
+  similarity: number;
+}
