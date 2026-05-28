@@ -1,6 +1,10 @@
 package com.example.agentplatform.agent.knowledge.service.impl;
 
+import com.example.agentplatform.agent.knowledge.config.MinerUProperties;
+import com.example.agentplatform.agent.knowledge.dto.MinerUParseResult;
 import com.example.agentplatform.agent.knowledge.service.DocumentParserService;
+import com.example.agentplatform.agent.knowledge.service.MinerUApiClient;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
 import org.apache.tika.metadata.Metadata;
@@ -16,14 +20,16 @@ import org.xml.sax.ContentHandler;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Pattern;
+
+import jakarta.annotation.PostConstruct;
 
 /**
  * 文档解析服务实现类
  *
  * 技术选型：
- * 使用 Apache Tika 作为核心解析引擎，这是 Apache 基金会的开源文档解析库。
- * Tika 能够自动检测文档类型并调用相应的解析器，支持上千种文件格式。
+ * - 默认使用 Apache Tika 作为基础解析引擎，支持上千种文件格式
+ * - 启用 MinerU 时，优先使用 MinerU 进行精细化解析，提取表格、图片、公式等结构化数据
+ * - MinerU 解析失败或未启用时，自动降级到 Apache Tika 解析
  *
  * Apache Tika 核心组件：
  * 1. AutoDetectParser - 自动检测文档类型并选择合适的解析器
@@ -31,15 +37,20 @@ import java.util.regex.Pattern;
  * 3. BodyContentHandler - 提取文档正文内容的 SAX 处理器
  * 4. Metadata - 存储文档元数据（作者、创建时间、页数等）
  *
+ * MinerU 核心能力：
+ * 1. 精准识别文档布局和层级结构
+ * 2. 提取表格为HTML/Markdown格式
+ * 3. 识别并提取文档中的图片和截图
+ * 4. 解析数学公式为LaTeX格式
+ * 5. 输出高质量的Markdown内容
+ *
  * 支持格式（部分）：
  * - 文档：PDF, DOC, DOCX, ODT, RTF, TXT
  * - 表格：XLS, XLSX, ODS, CSV
  * - 演示：PPT, PPTX, ODP
+ * - 图片（MinerU OCR）：PNG, JPG, JPEG, WEBP, GIF, BMP
  * - 标记语言：HTML, XML, Markdown, JSON
  * - 代码文件：Java, Python, JavaScript, TypeScript, Go, Rust 等
- * - 图片（OCR）：JPG, PNG 等（需安装 Tesseract OCR）
- * - 邮件：EML, MSG
- * - 压缩包：ZIP, RAR, TAR.GZ（递归解析内部文件）
  *
  * 依赖说明：
  * 需要在 pom.xml 中添加 Apache Tika 依赖：
@@ -64,48 +75,85 @@ public class DocumentParserServiceImpl implements DocumentParserService {
 
     private final Tika tika;
     private final AutoDetectParser parser;
+    private final MinerUApiClient minerUApiClient;
+    private final MinerUProperties minerUProperties;
 
     private static final int MAX_STRING_LENGTH = 10 * 1024 * 1024;
 
     private static final List<String> SUPPORTED_EXTENSIONS = Arrays.asList(
             ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
             ".txt", ".md", ".markdown", ".html", ".htm", ".rtf",
-            ".csv", ".json", ".xml", ".java", ".py", ".js", ".ts"
+            ".csv", ".json", ".xml", ".java", ".py", ".js", ".ts",
+            ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"
     );
 
     /**
-     * 构造函数：初始化 Tika 解析器
+     * 构造函数：初始化 Tika 解析器和 MinerU 客户端
      *
      * Tika 对象是线程安全的，可以在整个应用中复用。
      * AutoDetectParser 会自动加载所有可用的解析器。
+     *
+     * @param minerUApiClient MinerU API客户端
+     * @param minerUProperties MinerU配置属性
      */
-    public DocumentParserServiceImpl() {
+    public DocumentParserServiceImpl(MinerUApiClient minerUApiClient, MinerUProperties minerUProperties) {
         this.tika = new Tika();
         this.parser = new AutoDetectParser();
+        this.minerUApiClient = minerUApiClient;
+        this.minerUProperties = minerUProperties;
+    }
+
+    @PostConstruct
+    public void init() {
+        log.info("文档解析服务初始化完成，MinerU状态: {}",
+                isMinerUAvailable() ? "已启用" : "未启用");
+        if (minerUProperties.isEnabled()) {
+            log.info("MinerU配置: apiBaseUrl={}, modelVersion={}, extractImages={}, extractTables={}, extractFormulas={}",
+                    minerUProperties.getApiBaseUrl(),
+                    minerUProperties.getModelVersion(),
+                    minerUProperties.isExtractImages(),
+                    minerUProperties.isExtractTables(),
+                    minerUProperties.isExtractFormulas());
+        }
     }
 
     /**
      * 解析上传的文件并提取文本内容
      *
-     * 处理流程：
-     * 1. 校验文件非空
-     * 2. 获取文件输入流
-     * 3. 调用 parseStream 进行实际解析
-     * 4. 异常捕获和日志记录
+     * 智能降级策略：
+     * 1. 优先尝试使用MinerU进行精细化解析
+     * 2. 如果MinerU可用且解析成功，使用MinerU的文本结果
+     * 3. 如果MinerU不可用或解析失败，回退到Apache Tika解析
      *
      * @param file 上传的文件对象
      * @return 提取的纯文本内容，解析失败返回空字符串
      */
     @Override
     public String parseFile(MultipartFile file) {
+        if (isMinerUAvailable()) {
+            MinerUParseResult structuredResult = parseFileStructured(file);
+            if (structuredResult != null) {
+                String text = structuredResult.getTextContent();
+                if (text != null && !text.isBlank()) {
+                    return cleanText(text);
+                }
+            }
+        }
+        return parseFileWithTika(file);
+    }
+
+    /**
+     * 使用Apache Tika解析文件（降级方案）
+     */
+    private String parseFileWithTika(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             log.warn("文件为空，无法解析");
             return "";
         }
         try {
             return parseStream(file.getInputStream(), file.getOriginalFilename());
-        } catch (Exception e) {
-            log.error("解析文件失败: {}", file.getOriginalFilename(), e);
+        } catch (Throwable t) {
+            log.error("解析文件失败: {}", file.getOriginalFilename(), t);
             return "";
         }
     }
@@ -144,8 +192,8 @@ public class DocumentParserServiceImpl implements DocumentParserService {
             String rawText = handler.toString();
             return cleanText(rawText);
 
-        } catch (Exception e) {
-            log.error("解析文档失败: {}", fileName, e);
+        } catch (Throwable t) {
+            log.error("解析文档失败: {}", fileName, t);
             return "";
         }
     }
@@ -286,5 +334,103 @@ public class DocumentParserServiceImpl implements DocumentParserService {
      */
     private String removeExcessiveNewlines(String text) {
         return text.replaceAll("\\n{3,}", "\n\n");
+    }
+
+    /**
+     * 使用 MinerU 精细化解析文件，提取结构化数据
+     *
+     * 处理流程：
+     * 1. 检查MinerU是否启用
+     * 2. 调用MinerU API上传文件并创建解析任务
+     * 3. 轮询任务状态直到完成
+     * 4. 下载解析结果（Markdown + JSON）
+     * 5. 提取结构化数据（图片、表格、公式等）
+     *
+     * @param file 上传的文件对象
+     * @return MinerUParseResult 包含结构化解析结果，失败或未启用时返回null
+     */
+    @Override
+    public MinerUParseResult parseFileStructured(MultipartFile file) {
+        if (!isMinerUAvailable()) {
+            log.warn("MinerU is not available, structured parsing skipped for file: {}", file.getOriginalFilename());
+            return null;
+        }
+
+        try {
+            log.info("开始使用 MinerU 精细化解析文件: {}, 大小: {} bytes",
+                    file.getOriginalFilename(), file.getSize());
+
+            MinerUParseResult result = minerUApiClient.parseFile(file);
+
+            if (result != null) {
+                log.info("MinerU 解析成功: 文件={}, 文本长度={}, 图片数={}, 表格数={}, 公式数={}",
+                        file.getOriginalFilename(),
+                        result.getTextContent() != null ? result.getTextContent().length() : 0,
+                        result.getImages() != null ? result.getImages().size() : 0,
+                        result.getTables() != null ? result.getTables().size() : 0,
+                        result.getFormulas() != null ? result.getFormulas().size() : 0);
+            } else {
+                log.warn("MinerU 解析返回空结果，文件: {}", file.getOriginalFilename());
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            log.error("MinerU 结构化解析失败: {}", file.getOriginalFilename(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 使用 MinerU 精细化解析URL，提取结构化数据
+     *
+     * @param url 文档URL地址
+     * @return MinerUParseResult 结构化解析结果，失败或未启用时返回null
+     */
+    @Override
+    public MinerUParseResult parseUrlStructured(String url) {
+        if (!isMinerUAvailable()) {
+            log.warn("MinerU is not available, structured parsing skipped for url: {}", url);
+            return null;
+        }
+
+        try {
+            log.info("开始使用 MinerU 精细化解析URL: {}", url);
+
+            MinerUParseResult result = minerUApiClient.parseUrl(url);
+
+            if (result != null) {
+                log.info("MinerU URL解析成功: URL={}, 文本长度={}, 图片数={}, 表格数={}, 公式数={}",
+                        url,
+                        result.getTextContent() != null ? result.getTextContent().length() : 0,
+                        result.getImages() != null ? result.getImages().size() : 0,
+                        result.getTables() != null ? result.getTables().size() : 0,
+                        result.getFormulas() != null ? result.getFormulas().size() : 0);
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            log.error("MinerU URL结构化解析失败: {}", url, e);
+            return null;
+        }
+    }
+
+    /**
+     * 检查 MinerU 是否可用
+     *
+     * 检查条件：
+     * 1. MinerU 功能已启用
+     * 2. API Token 不是默认占位符（Agent轻量API无需Token时可留空）
+     *
+     * @return true 表示可用，false 表示不可用
+     */
+    @Override
+    public boolean isMinerUAvailable() {
+        if (!minerUProperties.isEnabled()) {
+            return false;
+        }
+        String token = minerUProperties.getApiToken();
+        return token == null || token.isBlank() || !token.equalsIgnoreCase("your-mineru-api-token");
     }
 }

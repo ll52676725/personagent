@@ -47,6 +47,24 @@ public class Knowledge {
     @Column(name = "file_size")
     private Long fileSize;
 
+    @Column(name = "markdown_content", columnDefinition = "LONGTEXT")
+    private String markdownContent;
+
+    @Column(name = "structured_data", columnDefinition = "LONGTEXT")
+    private String structuredData;
+
+    @Column(name = "parse_engine", length = 32)
+    private String parseEngine;
+
+    @Column(name = "image_count")
+    private Integer imageCount;
+
+    @Column(name = "table_count")
+    private Integer tableCount;
+
+    @Column(name = "formula_count")
+    private Integer formulaCount;
+
     @Column(length = 512)
     private String tags;
 

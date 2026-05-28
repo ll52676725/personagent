@@ -197,3 +197,32 @@ export interface SourceReference {
   content: string;
   similarity: number;
 }
+
+export interface ImageFormatInfo {
+  formatName: string;
+  extensions: string[];
+  mimeType: string;
+  readable: boolean;
+  writable: boolean;
+  description: string;
+}
+
+export interface ImageConvertResult {
+  originalFormat: string;
+  targetFormat: string;
+  originalFileName: string;
+  convertedFileName: string;
+  originalSize: number;
+  convertedSize: number;
+  width: number;
+  height: number;
+  mimeType: string;
+  imageDataBase64: string;
+}
+
+export interface ImageConvertRequest {
+  targetFormat: string;
+  quality?: number;
+  width?: number;
+  height?: number;
+}

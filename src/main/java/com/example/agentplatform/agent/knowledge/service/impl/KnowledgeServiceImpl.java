@@ -250,4 +250,18 @@ public class KnowledgeServiceImpl implements KnowledgeService {
     public void processKnowledgeChunks(Long knowledgeId) {
         log.info("处理知识条目 {} 的分片请求已记录", knowledgeId);
     }
+
+    /**
+     * 保存知识条目
+     *
+     * 用于更新已存在的知识条目，特别是保存MinerU解析的结构化数据
+     *
+     * @param knowledge 要保存的知识条目实体
+     * @return 保存后的知识条目实体
+     */
+    @Override
+    @Transactional
+    public Knowledge save(Knowledge knowledge) {
+        return knowledgeRepository.save(knowledge);
+    }
 }

@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference } from '@/types';
+import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -19,6 +19,13 @@ const KNOWLEDGE_BASE = `${API_BASE}/agent-knowledge`;
 
 const knowledgeClient: AxiosInstance = axios.create({
   baseURL: KNOWLEDGE_BASE,
+  timeout: 120000,
+});
+
+const TOOLS_BASE = `${API_BASE}/agent-tools`;
+
+const toolsClient: AxiosInstance = axios.create({
+  baseURL: TOOLS_BASE,
   timeout: 120000,
 });
 
@@ -66,6 +73,8 @@ articleClient.interceptors.request.use(attachAuth);
 articleClient.interceptors.response.use(handleResponse, handleError);
 knowledgeClient.interceptors.request.use(attachAuth);
 knowledgeClient.interceptors.response.use(handleResponse, handleError);
+toolsClient.interceptors.request.use(attachAuth);
+toolsClient.interceptors.response.use(handleResponse, handleError);
 
 export const authApi = {
   register: async (username: string, email: string, password: string) => {
@@ -694,4 +703,38 @@ const streamKnowledgeQuery = async (
     console.error('Knowledge stream error:', error);
     onError(error.message || '查询失败，请稍后重试');
   }
+};
+
+export const toolsApi = {
+  getImageFormats: async () => {
+    const response = await toolsClient.get('/image/formats');
+    return response.data as Result<ImageFormatInfo[]>;
+  },
+
+  convertImage: async (file: File, targetFormat: string, quality?: number, width?: number, height?: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('targetFormat', targetFormat);
+    if (quality !== undefined) formData.append('quality', quality.toString());
+    if (width !== undefined) formData.append('width', width.toString());
+    if (height !== undefined) formData.append('height', height.toString());
+    const response = await toolsClient.post('/image/convert', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as Result<ImageConvertResult>;
+  },
+
+  downloadConvertedImage: async (file: File, targetFormat: string, quality?: number, width?: number, height?: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('targetFormat', targetFormat);
+    if (quality !== undefined) formData.append('quality', quality.toString());
+    if (width !== undefined) formData.append('width', width.toString());
+    if (height !== undefined) formData.append('height', height.toString());
+    const response = await toolsClient.post('/image/convert-download', formData, {
+      responseType: 'blob',
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as Blob;
+  },
 };

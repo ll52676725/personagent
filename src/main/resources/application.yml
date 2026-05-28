@@ -112,3 +112,28 @@ agent:
       chunk:
         size: 500
         overlap: 50
+    mineru:
+      # 是否启用MinerU精细化文档解析，启用后优先使用MinerU解析
+      enabled: ${MINERU_ENABLED:true}
+      # MinerU API基础地址
+      api-base-url: ${MINERU_API_BASE_URL:https://mineru.net/api}
+      # MinerU API Token，在mineru.net官网申请。留空则使用Agent轻量API（有IP频率限制）
+      api-token: ${MINERU_API_TOKEN:}
+      # 模型版本：pipeline(默认)/vlm(推荐，更高精度)/MinerU-HTML(专为网页)
+      model-version: ${MINERU_MODEL_VERSION:vlm}
+      # 最大轮询次数（每次间隔3秒，默认60次=3分钟）
+      max-polling-attempts: ${MINERU_MAX_POLLING:60}
+      # 轮询间隔（毫秒）
+      polling-interval-ms: ${MINERU_POLLING_INTERVAL:3000}
+      # 连接超时（毫秒）
+      connect-timeout-ms: ${MINERU_CONNECT_TIMEOUT:30000}
+      # 读取超时（毫秒）
+      read-timeout-ms: ${MINERU_READ_TIMEOUT:120000}
+      # 是否提取图片
+      extract-images: ${MINERU_EXTRACT_IMAGES:true}
+      # 是否提取表格
+      extract-tables: ${MINERU_EXTRACT_TABLES:true}
+      # 是否提取公式
+      extract-formulas: ${MINERU_EXTRACT_FORMULAS:true}
+      # 输出格式：markdown/json/both
+      output-format: ${MINERU_OUTPUT_FORMAT:markdown}

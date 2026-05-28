@@ -29,6 +29,17 @@
                         <enabled>true</enabled>
                     </releases>
                 </repository>
+                <repository>
+                    <id>twelvemonkeys-repo</id>
+                    <name>TwelveMonkeys Repository</name>
+                    <url>https://repo1.maven.org/maven2</url>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                </repository>
             </repositories>
             <pluginRepositories>
                 <pluginRepository>
@@ -50,7 +61,7 @@
     <mirrors>
         <mirror>
             <id>nkrepo</id>
-            <mirrorOf>*,!spring-milestones,!maven-central</mirrorOf>
+            <mirrorOf>*,!spring-milestones,!maven-central,!twelvemonkeys-repo</mirrorOf>
             <url>http://192.168.72.21:8081/repository/maven-public/</url>
         </mirror>
     </mirrors>

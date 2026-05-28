@@ -31,25 +31,46 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        
+        String path = request.getRequestURI();
+        String method = request.getMethod();
+        
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            log.debug("OPTIONS request for {} - skipping JWT validation", path);
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         try {
             String jwt = getJwtFromRequest(request);
             
-            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                Long userId = tokenProvider.getUserIdFromToken(jwt);
-                
-                Optional<User> userOptional = userRepository.findById(userId);
-                if (userOptional.isPresent()) {
-                    User user = userOptional.get();
-                    UsernamePasswordAuthenticationToken authentication = 
-                            new UsernamePasswordAuthenticationToken(
-                                    user, null, Collections.singletonList(new SimpleGrantedAuthority("USER")));
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            if (StringUtils.hasText(jwt)) {
+                log.debug("JWT token found for request: {} {}", method, path);
+                if (tokenProvider.validateToken(jwt)) {
+                    Long userId = tokenProvider.getUserIdFromToken(jwt);
+                    log.debug("JWT token validated, userId: {}", userId);
                     
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    Optional<User> userOptional = userRepository.findById(userId);
+                    if (userOptional.isPresent()) {
+                        User user = userOptional.get();
+                        UsernamePasswordAuthenticationToken authentication = 
+                                new UsernamePasswordAuthenticationToken(
+                                        user, null, Collections.singletonList(new SimpleGrantedAuthority("USER")));
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        log.debug("User {} authenticated successfully", userId);
+                    } else {
+                        log.warn("User {} not found in database", userId);
+                    }
+                } else {
+                    log.warn("Invalid JWT token for request: {} {}", method, path);
                 }
+            } else {
+                log.debug("No JWT token found for request: {} {}", method, path);
             }
         } catch (Exception ex) {
-            log.error("Could not set user authentication in security context", ex);
+            log.error("Could not set user authentication in security context for: {} {}", method, path, ex);
         }
         
         filterChain.doFilter(request, response);

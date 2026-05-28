@@ -61,4 +61,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Result.serverError("系统内部错误"));
     }
+
+    @ExceptionHandler(Throwable.class)
+    public ResponseEntity<Result<Object>> handleThrowable(Throwable t) {
+        log.error("系统致命错误: ", t);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Result.serverError("系统内部错误：" + t.getMessage()));
+    }
 }

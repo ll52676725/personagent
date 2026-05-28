@@ -10,7 +10,8 @@ import {
   PenTool,
   Layers,
   Zap,
-  Library
+  Library,
+  Wrench
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
@@ -24,6 +25,7 @@ const navItems = [
   { id: 'articles', label: '文章创作', icon: PenTool, badge: '' },
   { id: 'collections', label: '合集管理', icon: Layers, badge: '新' },
   { id: 'knowledge', label: '知识库', icon: Library, badge: '新' },
+  { id: 'tools', label: '工具集', icon: Wrench, badge: '新' },
   { id: 'settings', label: '设置', icon: Settings, badge: '' },
 ];
 
@@ -84,11 +86,12 @@ export default function Layout({ children }: LayoutProps) {
             const Icon = item.icon;
             const isActive = currentPath.startsWith(item.id) || 
               (item.id === 'dashboard' && currentPath === 'dashboard') ||
-              (item.id === 'knowledge' && currentPath.startsWith('knowledge'));
+              (item.id === 'knowledge' && currentPath.startsWith('knowledge')) ||
+              (item.id === 'tools' && currentPath.startsWith('tools'));
             return (
               <button
                 key={item.id}
-                onClick={() => navigate(item.id === 'dashboard' ? '/dashboard' : item.id === 'knowledge' ? '/knowledge/bases' : `/${item.id}`)}
+                onClick={() => navigate(item.id === 'dashboard' ? '/dashboard' : item.id === 'knowledge' ? '/knowledge/bases' : item.id === 'tools' ? '/tools' : `/${item.id}`)}
                 className={`nav-item w-full animate-slideIn opacity-0`}
                 style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'forwards' }}
               >

@@ -3,6 +3,7 @@ package com.example.agentplatform.agent.knowledge.controller;
 import com.example.agentplatform.agent.knowledge.dto.KnowledgeCreateDTO;
 import com.example.agentplatform.agent.knowledge.dto.KnowledgeImportDTO;
 import com.example.agentplatform.agent.knowledge.dto.KnowledgeUpdateDTO;
+import com.example.agentplatform.agent.knowledge.dto.MinerUParseResult;
 import com.example.agentplatform.agent.knowledge.entity.Knowledge;
 import com.example.agentplatform.agent.knowledge.service.DocumentParserService;
 import com.example.agentplatform.agent.knowledge.service.EmbeddingService;
@@ -12,6 +13,7 @@ import com.example.agentplatform.agent.knowledge.service.impl.EmbeddingServiceIm
 import com.example.agentplatform.common.dto.Result;
 import com.example.agentplatform.common.exception.BusinessException;
 import com.example.agentplatform.common.security.SecurityUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +24,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 知识条目管理控制器
@@ -39,6 +43,7 @@ public class KnowledgeController {
     private final KnowledgeProcessService knowledgeProcessService;
     private final DocumentParserService documentParserService;
     private final EmbeddingServiceImpl embeddingService;
+    private final ObjectMapper objectMapper;
 
     private static final long MAX_FILE_SIZE = 50 * 1024 * 1024;
 
@@ -192,13 +197,15 @@ public class KnowledgeController {
 
     /**
      * 从文件导入知识内容
-     * 支持格式：PDF, Word(DOC/DOCX), Excel, PPT, TXT, MD, HTML, RTF 等
-     * 使用 Apache Tika 进行文档解析，自动提取文本并清洗
+     * 支持格式：PDF, Word(DOC/DOCX), Excel, PPT, TXT, MD, HTML, RTF, 图片(PNG/JPG/JPEG) 等
+     * 优先使用 MinerU 进行精细化解析，提取表格、图片、公式等结构化数据
+     * MinerU 不可用时自动降级到 Apache Tika 解析
      *
      * @param file 上传的文件
      * @param baseId 目标知识库ID
      * @param category 分类（可选）
      * @param tags 标签（可选，逗号分隔）
+     * @param useMinerU 是否使用MinerU精细化解析（默认true）
      * @return 导入的知识条目
      */
     @PostMapping("/import/file")
@@ -206,23 +213,44 @@ public class KnowledgeController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("baseId") Long baseId,
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) String tags) {
+            @RequestParam(required = false) String tags,
+            @RequestParam(required = false, defaultValue = "true") Boolean useMinerU) {
 
         Long userId = SecurityUtils.getCurrentUserId();
         String filename = file.getOriginalFilename();
 
-        log.info("用户 {} 开始导入文件: {}, 大小: {} bytes", userId, filename, file.getSize());
+        log.info("用户 {} 开始导入文件: {}, 大小: {} bytes, 使用MinerU: {}",
+                userId, filename, file.getSize(), useMinerU);
 
         if (file.getSize() > MAX_FILE_SIZE) {
             throw new BusinessException("文件大小超过限制，最大支持 50MB");
         }
 
         if (!documentParserService.isSupported(filename)) {
-            throw new BusinessException("不支持的文件格式，支持格式：PDF, Word, Excel, PPT, TXT, MD, HTML 等");
+            throw new BusinessException("不支持的文件格式，支持格式：PDF, Word, Excel, PPT, TXT, MD, HTML, 图片等");
         }
 
         try {
-            String content = documentParserService.parseFile(file);
+            String content;
+            String parseEngine = "tika";
+            MinerUParseResult structuredResult = null;
+
+            if (useMinerU && documentParserService.isMinerUAvailable()) {
+                structuredResult = documentParserService.parseFileStructured(file);
+                if (structuredResult != null) {
+                    parseEngine = "mineru";
+                    content = structuredResult.getTextContent();
+                    log.info("MinerU解析完成，提取到 {} 张图片, {} 个表格, {} 个公式",
+                            structuredResult.getImages() != null ? structuredResult.getImages().size() : 0,
+                            structuredResult.getTables() != null ? structuredResult.getTables().size() : 0,
+                            structuredResult.getFormulas() != null ? structuredResult.getFormulas().size() : 0);
+                } else {
+                    log.warn("MinerU解析返回空，降级使用Tika解析");
+                    content = documentParserService.parseFile(file);
+                }
+            } else {
+                content = documentParserService.parseFile(file);
+            }
 
             if (content == null || content.isBlank()) {
                 throw new BusinessException("无法从文件中提取文本内容，文件可能已损坏或为空");
@@ -244,14 +272,33 @@ public class KnowledgeController {
                     .build();
 
             Knowledge knowledge = knowledgeService.createKnowledge(userId, baseId, createDTO);
+
+            if (structuredResult != null) {
+                knowledge.setMarkdownContent(structuredResult.getMarkdownContent());
+                knowledge.setParseEngine(parseEngine);
+                knowledge.setImageCount(structuredResult.getImages() != null ? structuredResult.getImages().size() : 0);
+                knowledge.setTableCount(structuredResult.getTables() != null ? structuredResult.getTables().size() : 0);
+                knowledge.setFormulaCount(structuredResult.getFormulas() != null ? structuredResult.getFormulas().size() : 0);
+                try {
+                    Map<String, Object> structuredData = new HashMap<>();
+                    structuredData.put("images", structuredResult.getImages());
+                    structuredData.put("tables", structuredResult.getTables());
+                    structuredData.put("formulas", structuredResult.getFormulas());
+                    knowledge.setStructuredData(objectMapper.writeValueAsString(structuredData));
+                } catch (Exception e) {
+                    log.warn("序列化结构化数据失败", e);
+                }
+                knowledge = knowledgeService.save(knowledge);
+            }
+
             if (knowledge.getContent() != null && !knowledge.getContent().isBlank()) {
                 knowledgeProcessService.processAndEmbedKnowledge(knowledge.getId());
             }
 
-            log.info("用户 {} 文件导入成功: {}, 提取文本长度: {} 字符",
-                    userId, knowledge.getId(), content.length());
+            log.info("用户 {} 文件导入成功: {}, 解析引擎: {}, 文本长度: {} 字符",
+                    userId, knowledge.getId(), parseEngine, content.length());
 
-            return ResponseEntity.ok(Result.success("文件导入成功", knowledge));
+            return ResponseEntity.ok(Result.success("文件导入成功，解析引擎: " + parseEngine, knowledge));
 
         } catch (BusinessException e) {
             throw e;
@@ -379,5 +426,172 @@ public class KnowledgeController {
         result.put("costMs", cost);
         result.put("previewFirst5", embedding.subList(0, Math.min(5, embedding.size())));
         return ResponseEntity.ok(Result.success("Embedding 测试成功", result));
+    }
+
+    /**
+     * 获取MinerU解析服务状态
+     *
+     * @return MinerU服务状态信息，包括是否启用、是否可用、配置信息等
+     */
+    @GetMapping("/mineru/status")
+    public ResponseEntity<Result<Map<String, Object>>> getMinerUStatus() {
+        Map<String, Object> status = new HashMap<>();
+        status.put("enabled", documentParserService.isMinerUAvailable());
+        status.put("available", documentParserService.isMinerUAvailable());
+        status.put("supportedFormats", documentParserService.isSupported("test.pdf") ?
+                List.of("PDF", "DOC", "DOCX", "XLS", "XLSX", "PPT", "PPTX", "TXT", "MD", "HTML", "PNG", "JPG", "JPEG", "WEBP", "GIF", "BMP") :
+                List.of());
+        status.put("features", Map.of(
+                "extractImages", true,
+                "extractTables", true,
+                "extractFormulas", true,
+                "markdownOutput", true,
+                "structuredJson", true
+        ));
+        return ResponseEntity.ok(Result.success("MinerU状态查询成功", status));
+    }
+
+    /**
+     * 获取知识条目的结构化解析数据
+     *
+     * 返回通过MinerU解析得到的图片、表格、公式等结构化数据
+     *
+     * @param id 知识条目ID
+     * @return 结构化数据，包括图片列表、表格列表、公式列表等
+     */
+    @GetMapping("/items/{id}/structured")
+    public ResponseEntity<Result<Map<String, Object>>> getKnowledgeStructuredData(@PathVariable Long id) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        Knowledge knowledge = knowledgeService.getKnowledge(userId, id);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", knowledge.getId());
+        result.put("title", knowledge.getTitle());
+        result.put("parseEngine", knowledge.getParseEngine());
+        result.put("markdownContent", knowledge.getMarkdownContent());
+        result.put("imageCount", knowledge.getImageCount());
+        result.put("tableCount", knowledge.getTableCount());
+        result.put("formulaCount", knowledge.getFormulaCount());
+
+        if (knowledge.getStructuredData() != null && !knowledge.getStructuredData().isBlank()) {
+            try {
+                Map<String, Object> structured = objectMapper.readValue(
+                        knowledge.getStructuredData(),
+                        Map.class
+                );
+                result.putAll(structured);
+            } catch (Exception e) {
+                log.warn("解析结构化数据失败", e);
+                result.put("structuredData", knowledge.getStructuredData());
+            }
+        }
+
+        return ResponseEntity.ok(Result.success("结构化数据查询成功", result));
+    }
+
+    /**
+     * 使用MinerU重新解析知识条目
+     *
+     * 对于之前使用Tika解析的文件，可以调用此接口重新使用MinerU进行精细化解析
+     *
+     * @param id 知识条目ID
+     * @return 重新解析后的知识条目
+     */
+    @PostMapping("/items/{id}/reparse-mineru")
+    public ResponseEntity<Result<Knowledge>> reparseWithMinerU(@PathVariable Long id) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        Knowledge knowledge = knowledgeService.getKnowledge(userId, id);
+
+        if (!documentParserService.isMinerUAvailable()) {
+            throw new BusinessException("MinerU服务不可用，请检查配置");
+        }
+
+        if (knowledge.getFileName() == null || knowledge.getSourceType() == null
+                || !knowledge.getSourceType().equals("file")) {
+            throw new BusinessException("该知识条目不是文件导入类型，无法使用MinerU重新解析");
+        }
+
+        log.info("用户 {} 重新使用MinerU解析知识条目: {}, 文件: {}",
+                userId, id, knowledge.getFileName());
+
+        throw new BusinessException("文件内容未存储，无法重新解析。请重新上传文件以使用MinerU解析");
+    }
+
+    /**
+     * 使用MinerU精细化解析URL
+     *
+     * 与普通URL导入不同，此接口使用MinerU进行更深度的解析
+     *
+     * @param dto URL导入请求
+     * @return 导入的知识条目
+     */
+    @PostMapping("/import/url-mineru")
+    public ResponseEntity<Result<Knowledge>> importFromUrlWithMinerU(@Valid @RequestBody KnowledgeImportDTO dto) {
+        Long userId = SecurityUtils.getCurrentUserId();
+
+        if (!documentParserService.isMinerUAvailable()) {
+            throw new BusinessException("MinerU服务不可用，请检查配置");
+        }
+
+        log.info("用户 {} 开始使用MinerU导入URL: {}", userId, dto.getUrl());
+
+        try {
+            MinerUParseResult result = documentParserService.parseUrlStructured(dto.getUrl());
+
+            if (result == null || result.getTextContent() == null || result.getTextContent().isBlank()) {
+                throw new BusinessException("MinerU解析URL失败，无法提取内容");
+            }
+
+            String title = dto.getTitle() != null ? dto.getTitle() :
+                    (result.getMarkdownContent() != null ?
+                            result.getMarkdownContent().lines().findFirst().orElse("导入文档").replaceAll("#", "").trim() :
+                            "导入文档");
+
+            KnowledgeCreateDTO createDTO = KnowledgeCreateDTO.builder()
+                    .title(title)
+                    .content(result.getTextContent())
+                    .sourceType("url")
+                    .sourceUrl(dto.getUrl())
+                    .category(dto.getCategory())
+                    .tags(dto.getTags())
+                    .build();
+
+            Knowledge knowledge = knowledgeService.createKnowledge(userId,
+                    dto.getBaseId() != null ? dto.getBaseId() : 1L, createDTO);
+
+            knowledge.setMarkdownContent(result.getMarkdownContent());
+            knowledge.setParseEngine("mineru");
+            knowledge.setImageCount(result.getImages() != null ? result.getImages().size() : 0);
+            knowledge.setTableCount(result.getTables() != null ? result.getTables().size() : 0);
+            knowledge.setFormulaCount(result.getFormulas() != null ? result.getFormulas().size() : 0);
+
+            try {
+                Map<String, Object> structuredData = new HashMap<>();
+                structuredData.put("images", result.getImages());
+                structuredData.put("tables", result.getTables());
+                structuredData.put("formulas", result.getFormulas());
+                knowledge.setStructuredData(objectMapper.writeValueAsString(structuredData));
+            } catch (Exception e) {
+                log.warn("序列化结构化数据失败", e);
+            }
+
+            knowledge = knowledgeService.save(knowledge);
+
+            if (knowledge.getContent() != null && !knowledge.getContent().isBlank()) {
+                knowledgeProcessService.processAndEmbedKnowledge(knowledge.getId());
+            }
+
+            log.info("用户 {} MinerU URL导入成功: {}, 提取图片: {}, 表格: {}, 公式: {}",
+                    userId, knowledge.getId(), knowledge.getImageCount(),
+                    knowledge.getTableCount(), knowledge.getFormulaCount());
+
+            return ResponseEntity.ok(Result.success("MinerU URL导入成功", knowledge));
+
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("MinerU URL导入失败: {}", dto.getUrl(), e);
+            throw new BusinessException("MinerU URL导入失败：" + e.getMessage());
+        }
     }
 }

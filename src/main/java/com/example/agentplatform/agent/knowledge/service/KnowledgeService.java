@@ -14,4 +14,5 @@ public interface KnowledgeService {
     List<Knowledge> listAllKnowledge(Long userId);
     void deleteKnowledge(Long userId, Long knowledgeId);
     void processKnowledgeChunks(Long knowledgeId);
+    Knowledge save(Knowledge knowledge);
 }

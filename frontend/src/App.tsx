@@ -13,6 +13,8 @@ import KnowledgeBaseList from '@/components/KnowledgeBaseList';
 import KnowledgeBaseDetail from '@/components/KnowledgeBaseDetail';
 import KnowledgeQuery from '@/components/KnowledgeQuery';
 import Settings from '@/components/Settings';
+import ToolPanel from '@/components/ToolPanel';
+import ImageFormatConverter from '@/components/ImageFormatConverter';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
@@ -47,6 +49,8 @@ export default function App() {
       <Route path="/knowledge/bases" element={<ProtectedRoute><Layout><KnowledgeBaseList /></Layout></ProtectedRoute>} />
       <Route path="/knowledge/bases/:id" element={<ProtectedRoute><Layout><KnowledgeBaseDetail /></Layout></ProtectedRoute>} />
       <Route path="/knowledge/query" element={<ProtectedRoute><Layout><KnowledgeQuery /></Layout></ProtectedRoute>} />
+      <Route path="/tools" element={<ProtectedRoute><Layout><ToolPanel /></Layout></ProtectedRoute>} />
+      <Route path="/tools/image-converter" element={<ProtectedRoute><Layout><ImageFormatConverter /></Layout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
       
       <Route path="*" element={<Navigate to="/dashboard" />} />

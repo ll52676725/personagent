@@ -33,6 +33,7 @@ export default function KnowledgeBaseList() {
       setError('请输入知识库名称');
       return;
     }
+    setError('');
     try {
       const res = await knowledgeApi.createBase(newName, newDesc);
       if (res.code === 200) {
@@ -41,9 +42,13 @@ export default function KnowledgeBaseList() {
         setNewDesc('');
         setError('');
         fetchBases();
+      } else {
+        setError(res.message || '创建失败，请稍后重试');
       }
-    } catch (err) {
-      setError('创建失败，请稍后重试');
+    } catch (err: any) {
+      console.error('Failed to create knowledge base:', err);
+      const errorMsg = err.response?.data?.message || err.message || '创建失败，请检查网络连接后重试';
+      setError(errorMsg);
     }
   };
 

@@ -21,6 +21,7 @@ export default function CollectionList() {
   const [generatingArticle, setGeneratingArticle] = useState<number | null>(null);
   const [generatingAll, setGeneratingAll] = useState(false);
   const [generatedArticles, setGeneratedArticles] = useState<Article[]>([]);
+  const [createError, setCreateError] = useState('');
 
   useEffect(() => {
     fetchCollections();
@@ -40,8 +41,12 @@ export default function CollectionList() {
   };
 
   const handleCreate = async () => {
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim()) {
+      setCreateError('请输入合集标题');
+      return;
+    }
     
+    setCreateError('');
     try {
       const response = await collectionApi.create(newTitle, newDescription);
       if (response.code === 200) {
@@ -49,9 +54,13 @@ export default function CollectionList() {
         setNewTitle('');
         setNewDescription('');
         setShowCreateModal(false);
+      } else {
+        setCreateError(response.message || '创建失败，请稍后重试');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create collection:', err);
+      const errorMsg = err.response?.data?.message || err.message || '创建失败，请检查网络连接后重试';
+      setCreateError(errorMsg);
     }
   };
 
@@ -256,12 +265,17 @@ export default function CollectionList() {
               </button>
             </div>
             <div className="p-6 space-y-4 overflow-y-auto">
+              {createError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                  {createError}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">合集标题 *</label>
                 <input
                   type="text"
                   value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
+                  onChange={(e) => { setNewTitle(e.target.value); setCreateError(''); }}
                   placeholder="请输入合集标题"
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800"
                 />
@@ -280,7 +294,7 @@ export default function CollectionList() {
             </div>
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => { setShowCreateModal(false); setCreateError(''); setNewTitle(''); setNewDescription(''); }}
                 className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 type="button"
               >
