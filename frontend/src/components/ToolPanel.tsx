@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera } from 'lucide-react';
+import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera, Shapes } from 'lucide-react';
 
 interface ToolInfo {
   id: string;
@@ -12,6 +12,15 @@ interface ToolInfo {
 }
 
 const tools: ToolInfo[] = [
+  {
+    id: 'app-icon-generator',
+    title: 'APP ICON 生成器',
+    description: '一键生成 APP、小程序图标和公司 Logo，支持多种风格、形状、尺寸和配色方案',
+    icon: Shapes,
+    gradient: 'from-fuchsia-500 to-pink-600',
+    path: '/tools/app-icon-generator',
+    badge: '新',
+  },
   {
     id: 'photo-standardization',
     title: '证件照规范化',

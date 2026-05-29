@@ -21,6 +21,7 @@ import JsonFormatter from '@/components/JsonFormatter';
 import DiskAnalyzer from '@/components/DiskAnalyzer';
 import RegistryCleaner from '@/components/RegistryCleaner';
 import IpAnalyzer from '@/components/IpAnalyzer';
+import AppIconGenerator from '@/components/AppIconGenerator';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
@@ -63,6 +64,7 @@ export default function App() {
       <Route path="/tools/disk-analyzer" element={<ProtectedRoute><Layout><DiskAnalyzer /></Layout></ProtectedRoute>} />
       <Route path="/tools/registry-cleaner" element={<ProtectedRoute><Layout><RegistryCleaner /></Layout></ProtectedRoute>} />
       <Route path="/tools/ip-analyzer" element={<ProtectedRoute><Layout><IpAnalyzer /></Layout></ProtectedRoute>} />
+      <Route path="/tools/app-icon-generator" element={<ProtectedRoute><Layout><AppIconGenerator /></Layout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
       
       <Route path="*" element={<Navigate to="/dashboard" />} />

@@ -581,3 +581,29 @@ export interface PhotoStandardizationRequest {
   headTopMargin?: number;
   headBottomMargin?: number;
 }
+
+export interface IconDesignRequest {
+  brandName?: string;
+  description?: string;
+  iconType?: string;
+  iconCategory?: string;
+  industry?: string;
+  stylePreference?: string;
+  colorPreference?: string;
+}
+
+export interface IconDesignResult {
+  brandName: string;
+  initial: string;
+  iconCategory: 'text' | 'graphic';
+  graphicShape: string;
+  suggestedStyle: string;
+  suggestedShape: string;
+  primaryColor: string;
+  secondaryColor: string;
+  bgColor: string;
+  textColor: string;
+  subText: string;
+  designRationale: string;
+  decorativeElements: string[];
+}
