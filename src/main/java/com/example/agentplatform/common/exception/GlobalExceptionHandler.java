@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -53,6 +55,13 @@ public class GlobalExceptionHandler {
                         .data(errors)
                         .timestamp(System.currentTimeMillis())
                         .build());
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Result<Object>> handleNoResourceFoundException(NoResourceFoundException e) {
+        log.debug("静态资源未找到: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Result.notFound("请求的资源不存在"));
     }
     
     @ExceptionHandler(Exception.class)

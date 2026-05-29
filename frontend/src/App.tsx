@@ -15,6 +15,10 @@ import KnowledgeQuery from '@/components/KnowledgeQuery';
 import Settings from '@/components/Settings';
 import ToolPanel from '@/components/ToolPanel';
 import ImageFormatConverter from '@/components/ImageFormatConverter';
+import FileFormatConverter from '@/components/FileFormatConverter';
+import JsonFormatter from '@/components/JsonFormatter';
+import DiskAnalyzer from '@/components/DiskAnalyzer';
+import RegistryCleaner from '@/components/RegistryCleaner';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
@@ -51,6 +55,10 @@ export default function App() {
       <Route path="/knowledge/query" element={<ProtectedRoute><Layout><KnowledgeQuery /></Layout></ProtectedRoute>} />
       <Route path="/tools" element={<ProtectedRoute><Layout><ToolPanel /></Layout></ProtectedRoute>} />
       <Route path="/tools/image-converter" element={<ProtectedRoute><Layout><ImageFormatConverter /></Layout></ProtectedRoute>} />
+      <Route path="/tools/file-converter" element={<ProtectedRoute><Layout><FileFormatConverter /></Layout></ProtectedRoute>} />
+      <Route path="/tools/json-formatter" element={<ProtectedRoute><Layout><JsonFormatter /></Layout></ProtectedRoute>} />
+      <Route path="/tools/disk-analyzer" element={<ProtectedRoute><Layout><DiskAnalyzer /></Layout></ProtectedRoute>} />
+      <Route path="/tools/registry-cleaner" element={<ProtectedRoute><Layout><RegistryCleaner /></Layout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
       
       <Route path="*" element={<Navigate to="/dashboard" />} />

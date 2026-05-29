@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult } from '@/types';
+import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -62,6 +62,7 @@ const handleError = async (error: any) => {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       window.location.href = '/login';
+      return Promise.reject(error);
     }
   }
   return Promise.reject(error);
@@ -734,6 +735,118 @@ export const toolsApi = {
     const response = await toolsClient.post('/image/convert-download', formData, {
       responseType: 'blob',
       headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as Blob;
+  },
+
+  // 文件格式转换API
+  getFileFormats: async () => {
+    const response = await toolsClient.get('/file/formats');
+    return response.data as Result<FileFormatInfo[]>;
+  },
+
+  convertFile: async (file: File, targetFormat: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('targetFormat', targetFormat);
+    const response = await toolsClient.post('/file/convert', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as Result<FileConvertResult>;
+  },
+
+  downloadConvertedFile: async (file: File, targetFormat: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('targetFormat', targetFormat);
+    const response = await toolsClient.post('/file/convert-download', formData, {
+      responseType: 'blob',
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as Blob;
+  },
+
+  // JSON格式化工具API
+
+  /**
+   * 格式化JSON字符串
+   * @param request 格式化请求参数
+   */
+  formatJson: async (request: JsonFormatRequest) => {
+    const response = await toolsClient.post('/json/format', request);
+    return response.data as Result<JsonFormatResult>;
+  },
+
+  /**
+   * 压缩JSON字符串
+   * @param request 压缩请求参数
+   */
+  compactJson: async (request: JsonFormatRequest) => {
+    const response = await toolsClient.post('/json/compact', request);
+    return response.data as Result<JsonFormatResult>;
+  },
+
+  /**
+   * 校验JSON语法
+   * @param request 校验请求参数
+   */
+  validateJson: async (request: JsonFormatRequest) => {
+    const response = await toolsClient.post('/json/validate', request);
+    return response.data as Result<JsonFormatResult>;
+  },
+
+  /**
+   * 使用AI修复JSON格式错误
+   * @param request 修复请求参数
+   */
+  fixJsonWithAI: async (request: JsonFormatRequest) => {
+    const response = await toolsClient.post('/json/fix', request);
+    return response.data as Result<JsonFormatResult>;
+  },
+
+  getAvailableDrives: async () => {
+    const response = await toolsClient.get('/disk/drives');
+    return response.data as Result<DriveInfo[]>;
+  },
+
+  analyzeDrive: async (drive: string, maxDepth?: number) => {
+    const params: Record<string, string | number> = { drive };
+    if (maxDepth !== undefined) params.maxDepth = maxDepth;
+    const response = await toolsClient.get('/disk/analyze', {
+      params,
+      timeout: 600000,
+    });
+    return response.data as Result<DriveAnalysisResult>;
+  },
+
+  aiAnalyzeDrive: async (drive: string, maxDepth?: number) => {
+    const params: Record<string, string | number> = { drive };
+    if (maxDepth !== undefined) params.maxDepth = maxDepth;
+    const response = await toolsClient.get('/disk/ai-analyze', {
+      params,
+      timeout: 600000,
+    });
+    return response.data as Result<AIAnalysisResult>;
+  },
+
+  analyzeRegistry: async () => {
+    const response = await toolsClient.get('/registry/analyze', {
+      timeout: 600000,
+    });
+    return response.data as Result<RegistryAnalysisResult>;
+  },
+
+  generateCleanupScript: async (request: GenerateScriptRequest) => {
+    const response = await toolsClient.post('/registry/generate-script', request, {
+      timeout: 60000,
+    });
+    return response.data as Result<CleanupScript>;
+  },
+
+  downloadCleanupScript: async (request: GenerateScriptRequest) => {
+    const response = await toolsClient.post('/registry/download-script', request, {
+      responseType: 'blob',
+      timeout: 60000,
     });
     return response.data as Blob;
   },

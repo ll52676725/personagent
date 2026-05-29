@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Image, ArrowRight } from 'lucide-react';
+import { Image, ArrowRight, FileText, Code2, HardDrive, Database } from 'lucide-react';
 
 interface ToolInfo {
   id: string;
@@ -19,6 +19,42 @@ const tools: ToolInfo[] = [
     icon: Image,
     gradient: 'from-cyan-500 to-blue-600',
     path: '/tools/image-converter',
+    badge: '新',
+  },
+  {
+    id: 'file-converter',
+    title: '文件格式转换',
+    description: '支持 Word(doc/docx)、PDF、TXT、HTML、Excel(xls/xlsx)、CSV 等格式的互相转换',
+    icon: FileText,
+    gradient: 'from-emerald-500 to-teal-600',
+    path: '/tools/file-converter',
+    badge: '新',
+  },
+  {
+    id: 'json-formatter',
+    title: 'JSON 格式化',
+    description: 'JSON 格式化、压缩、校验，支持 AI 智能修复格式错误，详细错误定位与修复建议',
+    icon: Code2,
+    gradient: 'from-purple-500 to-pink-600',
+    path: '/tools/json-formatter',
+    badge: '新',
+  },
+  {
+    id: 'disk-analyzer',
+    title: '磁盘空间分析',
+    description: '分析 Windows 盘符空间占用，按文件类型分类统计，识别大文件夹，提供清理建议',
+    icon: HardDrive,
+    gradient: 'from-amber-500 to-orange-600',
+    path: '/tools/disk-analyzer',
+    badge: '新',
+  },
+  {
+    id: 'registry-cleaner',
+    title: '注册表清理',
+    description: '扫描 Windows 注册表冗余项，分析无效关联、启动项、卸载残留等，生成清理脚本',
+    icon: Database,
+    gradient: 'from-rose-500 to-red-600',
+    path: '/tools/registry-cleaner',
     badge: '新',
   },
 ];
