@@ -58,12 +58,12 @@
         <activeProfile>spring-ai</activeProfile>
     </activeProfiles>
 
-    <mirrors>
+    <!-- mirrors>
         <mirror>
             <id>nkrepo</id>
-            <mirrorOf>*,!spring-milestones,!maven-central,!twelvemonkeys-repo</mirrorOf>
+            <mirrorOf>central</mirrorOf>
             <url>http://192.168.72.21:8081/repository/maven-public/</url>
         </mirror>
-    </mirrors>
+    </mirrors -->
 
 </settings>

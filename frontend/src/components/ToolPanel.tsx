@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Image, ArrowRight, FileText, Code2, HardDrive, Database } from 'lucide-react';
+import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera } from 'lucide-react';
 
 interface ToolInfo {
   id: string;
@@ -13,13 +13,21 @@ interface ToolInfo {
 
 const tools: ToolInfo[] = [
   {
+    id: 'photo-standardization',
+    title: '证件照规范化',
+    description: '调整照片尺寸、更换背景色，生成符合各类系统要求的证件照',
+    icon: Camera,
+    gradient: 'from-violet-500 to-purple-600',
+    path: '/tools/photo-standardization',
+    badge: '新',
+  },
+  {
     id: 'image-converter',
     title: '图片格式转换',
     description: '支持 JPG、PNG、GIF、WebP、TIFF 等多种主流格式的互相转换，可调节压缩质量和尺寸',
     icon: Image,
     gradient: 'from-cyan-500 to-blue-600',
     path: '/tools/image-converter',
-    badge: '新',
   },
   {
     id: 'file-converter',
@@ -55,6 +63,15 @@ const tools: ToolInfo[] = [
     icon: Database,
     gradient: 'from-rose-500 to-red-600',
     path: '/tools/registry-cleaner',
+    badge: '新',
+  },
+  {
+    id: 'ip-analyzer',
+    title: 'IP地址分析器',
+    description: '查看当前IP信息、Ping测试、路由追踪、DNS解析、局域网扫描，一键分析连通性并定位卡点',
+    icon: Globe,
+    gradient: 'from-indigo-500 to-blue-600',
+    path: '/tools/ip-analyzer',
     badge: '新',
   },
 ];

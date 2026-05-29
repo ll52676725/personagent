@@ -420,3 +420,164 @@ export interface GenerateScriptRequest {
   scriptType: string;
   includeBackup: boolean;
 }
+
+export interface RegistryAISuggestion {
+  category: string;
+  categoryLabel: string;
+  title: string;
+  description: string;
+  registryPaths: string[];
+  issueCount: number;
+  riskLevel: string;
+  action: string;
+  reason: string;
+  priority: number;
+  impact: string;
+  precaution: string;
+}
+
+export interface RegistryAIAnalysisResult {
+  summary: string;
+  systemHealthScore: string;
+  systemHealthLevel: string;
+  totalIssues: number;
+  highRiskCount: number;
+  mediumRiskCount: number;
+  lowRiskCount: number;
+  suggestions: RegistryAISuggestion[];
+  analysisInsight: string;
+  optimizationAdvice: string;
+  model?: string;
+  tokens?: number;
+  analysisDurationMs: number;
+}
+
+export interface NetworkInterfaceInfo {
+  name: string;
+  displayName: string;
+  ipv4Address: string;
+  ipv6Address: string;
+  subnetMask: string;
+  macAddress: string;
+  up: boolean;
+  loopback: boolean;
+  mtu: number;
+}
+
+export interface CurrentIpInfo {
+  publicIp: string;
+  publicIpSource: string;
+  hostname: string;
+  networkInterfaces: NetworkInterfaceInfo[];
+  defaultGateway: string;
+  dnsServer: string;
+}
+
+export interface PingResult {
+  target: string;
+  reachable: boolean;
+  ipAddress: string;
+  pingTimeMs: number;
+  ttl: number | null;
+  packetsSent: number;
+  packetsReceived: number;
+  packetLossRate: number;
+  errorMessage?: string;
+}
+
+export interface TracerouteHop {
+  hop: number;
+  host: string;
+  ip: string;
+  latency1: number;
+  latency2: number;
+  latency3: number;
+  timeout: boolean;
+}
+
+export interface TracerouteResult {
+  target: string;
+  targetIp: string;
+  hops: TracerouteHop[];
+  totalHops: number;
+  reachedTarget: boolean;
+  blockHop: number | null;
+  blockIp: string | null;
+  blockAnalysis: string | null;
+  durationMs: number;
+  errorMessage?: string;
+}
+
+export interface DnsResult {
+  domain: string;
+  resolvedIp: string;
+  success: boolean;
+  dnsServer?: string;
+  queryTimeMs: number;
+  errorMessage?: string;
+}
+
+export interface ArpEntry {
+  ipAddress: string;
+  macAddress: string;
+  type: string;
+  interfaceName: string;
+}
+
+export interface LanScanResult {
+  subnet: string;
+  interfaceName: string;
+  arpEntries: ArpEntry[];
+  totalDevices: number;
+  scanDurationMs: number;
+}
+
+export interface ConnectivityAnalysis {
+  sourceIp: string;
+  targetIp: string;
+  targetHost: string;
+  isLan: boolean;
+  pingable: boolean;
+  pingResult: PingResult;
+  tracerouteResult: TracerouteResult | null;
+  dnsResult: DnsResult | null;
+  overallStatus: string;
+  diagnosis: string;
+  suggestions: string[];
+}
+
+export interface PhotoSize {
+  code: string;
+  name: string;
+  widthMm: string;
+  heightMm: string;
+  widthPx: number;
+  heightPx: number;
+  description: string;
+  usage: string;
+}
+
+export interface PhotoStandardizationResult {
+  originalFileName: string;
+  convertedFileName: string;
+  originalSize: number;
+  convertedSize: number;
+  width: number;
+  height: number;
+  photoSize: string;
+  backgroundColor: string;
+  dpi: string;
+  mimeType: string;
+  imageDataBase64: string;
+}
+
+export interface PhotoStandardizationRequest {
+  file?: File;
+  photoSize: string;
+  backgroundColor: string;
+  jpegOutput: boolean;
+  quality?: number;
+  autoDetectFace?: boolean;
+  headTopMargin?: number;
+  headBottomMargin?: number;
+}

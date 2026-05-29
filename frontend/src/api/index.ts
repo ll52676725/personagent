@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest } from '@/types';
+import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -847,6 +847,124 @@ export const toolsApi = {
     const response = await toolsClient.post('/registry/download-script', request, {
       responseType: 'blob',
       timeout: 60000,
+    });
+    return response.data as Blob;
+  },
+
+  aiAnalyzeRegistry: async () => {
+    const response = await toolsClient.get('/registry/ai-analyze', {
+      timeout: 600000,
+    });
+    return response.data as Result<RegistryAIAnalysisResult>;
+  },
+
+  getCurrentIpInfo: async () => {
+    const response = await toolsClient.get('/ip/current', {
+      timeout: 30000,
+    });
+    return response.data as Result<CurrentIpInfo>;
+  },
+
+  ping: async (target: string, count?: number) => {
+    const params: Record<string, string | number> = { target };
+    if (count !== undefined) params.count = count;
+    const response = await toolsClient.get('/ip/ping', {
+      params,
+      timeout: 60000,
+    });
+    return response.data as Result<PingResult>;
+  },
+
+  traceroute: async (target: string) => {
+    const response = await toolsClient.get('/ip/traceroute', {
+      params: { target },
+      timeout: 180000,
+    });
+    return response.data as Result<TracerouteResult>;
+  },
+
+  resolveDns: async (domain: string) => {
+    const response = await toolsClient.get('/ip/dns', {
+      params: { domain },
+      timeout: 30000,
+    });
+    return response.data as Result<DnsResult>;
+  },
+
+  scanLan: async () => {
+    const response = await toolsClient.get('/ip/lan-scan', {
+      timeout: 30000,
+    });
+    return response.data as Result<LanScanResult>;
+  },
+
+  analyzeConnectivity: async (target: string) => {
+    const response = await toolsClient.get('/ip/analyze', {
+      params: { target },
+      timeout: 180000,
+    });
+    return response.data as Result<ConnectivityAnalysis>;
+  },
+
+  getPhotoSizes: async () => {
+    const response = await toolsClient.get('/photo/sizes');
+    return response.data as Result<PhotoSize[]>;
+  },
+
+  getPhotoBackgrounds: async () => {
+    const response = await toolsClient.get('/photo/backgrounds');
+    return response.data as Result<string[]>;
+  },
+
+  standardizePhoto: async (request: PhotoStandardizationRequest) => {
+    const formData = new FormData();
+    if (request.file) {
+      formData.append('file', request.file);
+    }
+    formData.append('photoSize', request.photoSize);
+    formData.append('backgroundColor', request.backgroundColor);
+    formData.append('jpegOutput', request.jpegOutput.toString());
+    if (request.quality !== undefined) {
+      formData.append('quality', request.quality.toString());
+    }
+    if (request.autoDetectFace !== undefined) {
+      formData.append('autoDetectFace', request.autoDetectFace.toString());
+    }
+    if (request.headTopMargin !== undefined) {
+      formData.append('headTopMargin', request.headTopMargin.toString());
+    }
+    if (request.headBottomMargin !== undefined) {
+      formData.append('headBottomMargin', request.headBottomMargin.toString());
+    }
+    const response = await toolsClient.post('/photo/standardize', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data as Result<PhotoStandardizationResult>;
+  },
+
+  downloadStandardizedPhoto: async (request: PhotoStandardizationRequest) => {
+    const formData = new FormData();
+    if (request.file) {
+      formData.append('file', request.file);
+    }
+    formData.append('photoSize', request.photoSize);
+    formData.append('backgroundColor', request.backgroundColor);
+    formData.append('jpegOutput', request.jpegOutput.toString());
+    if (request.quality !== undefined) {
+      formData.append('quality', request.quality.toString());
+    }
+    if (request.autoDetectFace !== undefined) {
+      formData.append('autoDetectFace', request.autoDetectFace.toString());
+    }
+    if (request.headTopMargin !== undefined) {
+      formData.append('headTopMargin', request.headTopMargin.toString());
+    }
+    if (request.headBottomMargin !== undefined) {
+      formData.append('headBottomMargin', request.headBottomMargin.toString());
+    }
+    const response = await toolsClient.post('/photo/standardize-download', formData, {
+      responseType: 'blob',
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data as Blob;
   },

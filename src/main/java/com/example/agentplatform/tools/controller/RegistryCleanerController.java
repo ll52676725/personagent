@@ -100,4 +100,18 @@ public class RegistryCleanerController {
             return ResponseEntity.status(500).build();
         }
     }
+
+    @GetMapping("/ai-analyze")
+    public ResponseEntity<Result<RegistryAIAnalysisResultDTO>> aiAnalyzeRegistry() {
+        try {
+            RegistryAIAnalysisResultDTO result = registryCleanerService.aiAnalyzeRegistry();
+            return ResponseEntity.ok(Result.success("AI注册表分析完成", result));
+        } catch (SecurityException e) {
+            log.error("无权限访问注册表", e);
+            return ResponseEntity.status(403).body(Result.forbidden("无权限访问注册表，请以管理员身份运行"));
+        } catch (Exception e) {
+            log.error("AI分析注册表失败", e);
+            return ResponseEntity.status(500).body(Result.serverError("AI分析失败: " + e.getMessage()));
+        }
+    }
 }

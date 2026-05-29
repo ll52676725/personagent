@@ -18,9 +18,16 @@ import {
   Zap,
   AlertTriangle,
   FileText,
+  Brain,
+  TrendingUp,
+  HeartPulse,
+  Lightbulb,
+  Gauge,
+  Clock,
+  Sparkles,
 } from 'lucide-react';
 import { toolsApi } from '@/api';
-import { RegistryAnalysisResult, RegistryIssue, CleanupScript, GenerateScriptRequest } from '@/types';
+import { RegistryAnalysisResult, RegistryIssue, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, RegistryAISuggestion } from '@/types';
 
 const CATEGORY_LABELS: Record<string, string> = {
   file_association: '文件关联',
@@ -259,6 +266,175 @@ function ScriptPreviewModal({
   );
 }
 
+const HEALTH_LEVEL_CONFIG: Record<string, { color: string; bgColor: string; borderColor: string }> = {
+  优秀: { color: 'text-emerald-400', bgColor: 'bg-emerald-500/20', borderColor: 'border-emerald-500/30' },
+  良好: { color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', borderColor: 'border-cyan-500/30' },
+  一般: { color: 'text-amber-400', bgColor: 'bg-amber-500/20', borderColor: 'border-amber-500/30' },
+  较差: { color: 'text-orange-400', bgColor: 'bg-orange-500/20', borderColor: 'border-orange-500/30' },
+  危险: { color: 'text-red-400', bgColor: 'bg-red-500/20', borderColor: 'border-red-500/30' },
+};
+
+function HealthScoreDisplay({ score, level }: { score: string; level: string }) {
+  const config = HEALTH_LEVEL_CONFIG[level] || HEALTH_LEVEL_CONFIG.一般;
+  const scoreNum = parseInt(score);
+
+  return (
+    <div className="flex items-center gap-6">
+      <div className="relative w-32 h-32 shrink-0">
+        <svg className="w-full h-full transform -rotate-90">
+          <circle
+            cx="64"
+            cy="64"
+            r="56"
+            stroke="currentColor"
+            strokeWidth="8"
+            fill="none"
+            className="text-white/10"
+          />
+          <circle
+            cx="64"
+            cy="64"
+            r="56"
+            stroke="url(#healthGradient)"
+            strokeWidth="8"
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={`${scoreNum * 3.52} 352`}
+            className="transition-all duration-1000 ease-out"
+          />
+          <defs>
+            <linearGradient id="healthGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" className={scoreNum >= 90 ? 'stop-color-emerald-500' : scoreNum >= 75 ? 'stop-color-cyan-500' : scoreNum >= 60 ? 'stop-color-amber-500' : scoreNum >= 40 ? 'stop-color-orange-500' : 'stop-color-red-500'} />
+              <stop offset="100%" className={scoreNum >= 90 ? 'stop-color-teal-500' : scoreNum >= 75 ? 'stop-color-blue-500' : scoreNum >= 60 ? 'stop-color-yellow-500' : scoreNum >= 40 ? 'stop-color-red-500' : 'stop-color-rose-600'} />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-3xl font-bold text-white">{score}</span>
+          <span className="text-xs text-gray-400">健康分</span>
+        </div>
+      </div>
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-2">
+          <HeartPulse className={`w-5 h-5 ${config.color}`} />
+          <span className={`text-lg font-bold ${config.color}`}>{level}</span>
+        </div>
+        <p className="text-gray-400 text-sm">
+          {scoreNum >= 90
+            ? '注册表状态非常好，继续保持良好的使用习惯！'
+            : scoreNum >= 75
+            ? '注册表状态良好，存在少量可优化项。'
+            : scoreNum >= 60
+            ? '注册表存在一些问题，建议进行清理优化。'
+            : scoreNum >= 40
+            ? '注册表问题较多，可能影响系统性能，建议尽快清理。'
+            : '注册表存在严重问题，强烈建议立即清理并备份系统！'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AISuggestionItem({
+  suggestion,
+  isExpanded,
+  onToggleExpand,
+}: {
+  suggestion: RegistryAISuggestion;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+}) {
+  const severity = SEVERITY_CONFIG[suggestion.riskLevel] || SEVERITY_CONFIG.low;
+  const categoryColor = CATEGORY_COLORS[suggestion.category] || '#9ca3af';
+
+  return (
+    <div className={`bg-white/5 rounded-2xl overflow-hidden border ${severity.borderColor} hover:bg-white/10 transition-colors`}>
+      <button onClick={onToggleExpand} className="w-full p-4 flex items-center gap-3 text-left">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${severity.bgColor}`}>
+          <span className="text-white font-bold text-sm">#{suggestion.priority}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-white font-medium text-sm truncate">{suggestion.title}</p>
+            <SeverityBadge severity={suggestion.riskLevel} />
+            <span
+              className="px-2 py-0.5 text-xs rounded-full shrink-0"
+              style={{ backgroundColor: `${categoryColor}20`, color: categoryColor }}
+            >
+              {suggestion.categoryLabel}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-gray-400">
+            <span className="flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              {suggestion.issueCount} 项问题
+            </span>
+            <span className="flex items-center gap-1">
+              <Zap className="w-3 h-3" />
+              {suggestion.action}
+            </span>
+          </div>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+        )}
+      </button>
+      {isExpanded && (
+        <div className="px-4 pb-4 space-y-3 animate-fadeIn">
+          <div className="flex items-start gap-2 p-3 bg-white/5 rounded-xl">
+            <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <p className="text-cyan-400 font-medium mb-1">问题描述</p>
+              <p className="text-gray-300">{suggestion.description}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 p-3 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl">
+            <Brain className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <p className="text-purple-400 font-medium mb-1">AI分析 - 为什么可以清理</p>
+              <p className="text-gray-300">{suggestion.reason}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 p-3 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-xl">
+            <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <p className="text-emerald-400 font-medium mb-1">预期效果</p>
+              <p className="text-gray-300">{suggestion.impact}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl">
+            <Shield className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <p className="text-amber-400 font-medium mb-1">注意事项</p>
+              <p className="text-gray-300">{suggestion.precaution}</p>
+            </div>
+          </div>
+          {suggestion.registryPaths && suggestion.registryPaths.length > 0 && (
+            <div className="flex items-start gap-2 p-3 bg-white/5 rounded-xl">
+              <FileText className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+              <div className="text-xs flex-1">
+                <p className="text-gray-400 font-medium mb-1">相关注册表路径（{suggestion.registryPaths.length}条）</p>
+                <div className="space-y-1">
+                  {suggestion.registryPaths.slice(0, 3).map((path, idx) => (
+                    <p key={idx} className="text-gray-300 font-mono text-xs break-all">
+                      {path}
+                    </p>
+                  ))}
+                  {suggestion.registryPaths.length > 3 && (
+                    <p className="text-gray-500">...还有 {suggestion.registryPaths.length - 3} 条</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function RegistryCleaner() {
   const navigate = useNavigate();
   const [analysis, setAnalysis] = useState<RegistryAnalysisResult | null>(null);
@@ -272,6 +448,10 @@ export default function RegistryCleaner() {
   const [scriptPreview, setScriptPreview] = useState<CleanupScript | null>(null);
   const [scriptType, setScriptType] = useState<'reg' | 'bat'>('reg');
   const [includeBackup, setIncludeBackup] = useState(true);
+  const [aiAnalysis, setAiAnalysis] = useState<RegistryAIAnalysisResult | null>(null);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [showAIResult, setShowAIResult] = useState(false);
+  const [expandedSuggestionId, setExpandedSuggestionId] = useState<number | null>(null);
 
   const filteredIssues = useMemo(() => {
     return issues.filter((issue) => {
@@ -322,6 +502,39 @@ export default function RegistryCleaner() {
     setIssues((prev) =>
       prev.map((issue) => (issue.severity === severity ? { ...issue, selected: true } : issue))
     );
+  };
+
+  const handleAIAnalyze = async () => {
+    setAiAnalyzing(true);
+    setError('');
+    try {
+      const res = await toolsApi.aiAnalyzeRegistry();
+      if (res.code === 200 && res.data) {
+        setAiAnalysis(res.data);
+        setShowAIResult(true);
+        if (res.data.model !== 'fallback') {
+          setAnalysis({
+            summary: res.data.summary,
+            totalIssues: res.data.totalIssues,
+            analysisDurationMs: res.data.analysisDurationMs,
+            categoryStats: {},
+            severityStats: {
+              high: res.data.highRiskCount,
+              medium: res.data.mediumRiskCount,
+              low: res.data.lowRiskCount,
+            },
+            issues: [],
+            disclaimer: '',
+          });
+        }
+      } else {
+        setError(res.message || 'AI分析失败');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'AI分析失败，请稍后重试');
+    } finally {
+      setAiAnalyzing(false);
+    }
   };
 
   const handleGenerateScript = async () => {
@@ -427,7 +640,7 @@ export default function RegistryCleaner() {
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <button
             onClick={handleAnalyze}
-            disabled={analyzing}
+            disabled={analyzing || aiAnalyzing}
             className="btn-primary flex items-center justify-center gap-2"
           >
             {analyzing ? (
@@ -438,18 +651,44 @@ export default function RegistryCleaner() {
             ) : (
               <>
                 <Zap className="w-5 h-5" />
-                {analysis ? '重新扫描' : '开始扫描'}
+                {analysis && !showAIResult ? '重新扫描' : '开始扫描'}
               </>
             )}
           </button>
-          {analysis && (
+          <button
+            onClick={handleAIAnalyze}
+            disabled={analyzing || aiAnalyzing}
+            className="btn-secondary flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-purple-500/30 hover:from-purple-600/30 hover:to-pink-600/30"
+          >
+            {aiAnalyzing ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                AI分析中...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5 text-purple-400" />
+                AI智能分析
+              </>
+            )}
+          </button>
+          {analysis && !showAIResult && (
             <button
               onClick={handleAnalyze}
-              disabled={analyzing}
+              disabled={analyzing || aiAnalyzing}
               className="btn-secondary flex items-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
               重新扫描
+            </button>
+          )}
+          {showAIResult && (
+            <button
+              onClick={() => setShowAIResult(false)}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Database className="w-4 h-4" />
+              查看详细问题
             </button>
           )}
         </div>
@@ -469,7 +708,126 @@ export default function RegistryCleaner() {
           </div>
         )}
 
-        {analysis && !analyzing && (
+        {aiAnalyzing && (
+          <div className="text-center py-12">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-600/20 flex items-center justify-center mx-auto mb-4">
+              <Brain className="w-10 h-10 text-purple-400 animate-pulse" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">AI正在深入分析</h3>
+            <p className="text-gray-400 text-sm">AI正在扫描并分析注册表问题，请耐心等待...</p>
+            <div className="mt-4 max-w-xs mx-auto">
+              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-600 animate-shimmer" style={{ width: '70%' }} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showAIResult && aiAnalysis && !aiAnalyzing && (
+          <>
+            <div className="glass-card rounded-2xl p-6 mb-6 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/30">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">AI智能分析报告</h3>
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <Clock className="w-3 h-3" />
+                    <span>分析耗时: {(aiAnalysis.analysisDurationMs / 1000).toFixed(1)}s</span>
+                    {aiAnalysis.tokens && (
+                      <>
+                        <span className="text-gray-600">|</span>
+                        <span>Token消耗: {aiAnalysis.tokens}</span>
+                      </>
+                    )}
+                    {aiAnalysis.model && (
+                      <>
+                        <span className="text-gray-600">|</span>
+                        <span className={aiAnalysis.model === 'fallback' ? 'text-amber-400' : 'text-purple-400'}>
+                          模型: {aiAnalysis.model === 'fallback' ? '智能模式(离线)' : aiAnalysis.model}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <HealthScoreDisplay score={aiAnalysis.systemHealthScore} level={aiAnalysis.systemHealthLevel} />
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              <div className="stat-card">
+                <p className="text-gray-400 text-xs mb-1">发现问题</p>
+                <p className="text-white font-bold text-lg">{aiAnalysis.totalIssues}</p>
+              </div>
+              <div className="stat-card">
+                <p className="text-gray-400 text-xs mb-1">高危项</p>
+                <p className="text-red-400 font-bold text-lg">{aiAnalysis.highRiskCount}</p>
+              </div>
+              <div className="stat-card">
+                <p className="text-gray-400 text-xs mb-1">中危项</p>
+                <p className="text-amber-400 font-bold text-lg">{aiAnalysis.mediumRiskCount}</p>
+              </div>
+              <div className="stat-card">
+                <p className="text-gray-400 text-xs mb-1">低危项</p>
+                <p className="text-emerald-400 font-bold text-lg">{aiAnalysis.lowRiskCount}</p>
+              </div>
+            </div>
+
+            <div className="glass-card rounded-2xl p-5 mb-6 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
+              <div className="flex items-start gap-3">
+                <Brain className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-purple-400 font-medium mb-1">AI分析见解</p>
+                  <p className="text-gray-300 text-sm">{aiAnalysis.analysisInsight}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-card rounded-2xl p-5 mb-6 bg-gradient-to-r from-cyan-500/10 to-teal-500/10 border border-cyan-500/20">
+              <div className="flex items-start gap-3">
+                <Lightbulb className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-cyan-400 font-medium mb-1">系统优化建议</p>
+                  <div className="text-gray-300 text-sm whitespace-pre-line">{aiAnalysis.optimizationAdvice}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="glass-card rounded-2xl p-5 mb-6">
+              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Gauge className="w-4 h-4 text-purple-400" />
+                AI清理建议（按优先级排序）
+              </h3>
+              <div className="space-y-3">
+                {aiAnalysis.suggestions.map((suggestion, index) => (
+                  <AISuggestionItem
+                    key={index}
+                    suggestion={suggestion}
+                    isExpanded={expandedSuggestionId === index}
+                    onToggleExpand={() => setExpandedSuggestionId(expandedSuggestionId === index ? null : index)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="glass-card rounded-2xl p-5 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/30">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="text-amber-400 font-medium mb-2">AI分析说明</p>
+                  <p className="text-gray-300">
+                    {aiAnalysis.model === 'fallback'
+                      ? '当前使用智能离线模式提供分析建议。配置有效的API Key后可获得更精准的AI分析结果。'
+                      : 'AI分析结果仅供参考，清理注册表前请务必备份重要数据并创建系统还原点。'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {analysis && !analyzing && !showAIResult && (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
               <div className="stat-card">
