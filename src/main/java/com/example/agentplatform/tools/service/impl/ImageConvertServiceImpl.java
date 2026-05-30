@@ -1,6 +1,7 @@
 package com.example.agentplatform.tools.service.impl;
 
 import com.example.agentplatform.common.exception.BusinessException;
+import com.example.agentplatform.tools.common.FileUtils;
 import com.example.agentplatform.tools.dto.ImageConvertRequestDTO;
 import com.example.agentplatform.tools.dto.ImageConvertResultDTO;
 import com.example.agentplatform.tools.dto.ImageFormatInfoDTO;
@@ -19,7 +20,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
-import java.util.Base64;
 import java.util.List;
 
 @Slf4j
@@ -71,12 +71,11 @@ public class ImageConvertServiceImpl implements ImageConvertService {
         byte[] convertedBytes = convertToBytesInternal(file, request);
 
         BufferedImage originalImage = readImage(file);
-        String sourceFormat = detectSourceFormat(file.getOriginalFilename());
+        String sourceFormat = FileUtils.detectFileExtension(file.getOriginalFilename());
         String originalFileName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "unknown";
-        String convertedFileName = buildConvertedFileName(originalFileName, targetFormat);
+        String convertedFileName = FileUtils.buildConvertedFileName(originalFileName, targetFormat);
 
-        String base64Data = "data:" + FORMAT_MIME_MAP.get(targetFormat) + ";base64," +
-                Base64.getEncoder().encodeToString(convertedBytes);
+        String base64Data = FileUtils.toBase64Data(convertedBytes, FORMAT_MIME_MAP.get(targetFormat));
 
         log.info("图片格式转换完成: {} -> {}, 原始大小: {} bytes, 转换后大小: {} bytes",
                 sourceFormat, targetFormat, file.getSize(), convertedBytes.length);
@@ -200,17 +199,6 @@ public class ImageConvertServiceImpl implements ImageConvertService {
         }
     }
 
-    private String detectSourceFormat(String fileName) {
-        if (fileName == null || fileName.isEmpty()) {
-            return "unknown";
-        }
-        int dotIndex = fileName.lastIndexOf('.');
-        if (dotIndex < 0) {
-            return "unknown";
-        }
-        return fileName.substring(dotIndex + 1).toLowerCase();
-    }
-
     private BufferedImage resizeImage(BufferedImage original, int targetWidth, int targetHeight) {
         BufferedImage resized = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = resized.createGraphics();
@@ -304,11 +292,5 @@ public class ImageConvertServiceImpl implements ImageConvertService {
         } finally {
             writer.dispose();
         }
-    }
-
-    private String buildConvertedFileName(String originalFileName, String targetFormat) {
-        int dotIndex = originalFileName.lastIndexOf('.');
-        String baseName = dotIndex > 0 ? originalFileName.substring(0, dotIndex) : originalFileName;
-        return baseName + "." + targetFormat;
     }
 }

@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest, IconDesignRequest, IconDesignResult } from '@/types';
+import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest, IconDesignRequest, IconDesignResult, VirusScanResult, VirusAIAnalysisResult, RemediationScript, GenerateRemediationScriptRequest, RuleTemplate, RuleConfig, RulePullLog, RulePullResult, AIRuleGenerateRequest } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -26,6 +26,13 @@ const TOOLS_BASE = `${API_BASE}/agent-tools`;
 
 const toolsClient: AxiosInstance = axios.create({
   baseURL: TOOLS_BASE,
+  timeout: 120000,
+});
+
+const RULES_BASE = `${API_BASE}/agent-rules`;
+
+const rulesClient: AxiosInstance = axios.create({
+  baseURL: RULES_BASE,
   timeout: 120000,
 });
 
@@ -76,6 +83,8 @@ knowledgeClient.interceptors.request.use(attachAuth);
 knowledgeClient.interceptors.response.use(handleResponse, handleError);
 toolsClient.interceptors.request.use(attachAuth);
 toolsClient.interceptors.response.use(handleResponse, handleError);
+rulesClient.interceptors.request.use(attachAuth);
+rulesClient.interceptors.response.use(handleResponse, handleError);
 
 export const authApi = {
   register: async (username: string, email: string, password: string) => {
@@ -972,5 +981,188 @@ export const toolsApi = {
   generateIconDesign: async (request: IconDesignRequest) => {
     const response = await toolsClient.post('/icon/design', request);
     return response.data as Result<IconDesignResult>;
+  },
+
+  /**
+   * 执行系统安全扫描
+   * <p>扫描内容包括：可疑进程、启动项、临时目录、系统服务、计划任务、
+   * 系统漏洞、开放端口、过期软件、安全设置等9个维度
+   * <p>超时时间：10分钟（扫描可能需要较长时间）
+   * 
+   * @returns 扫描结果，包含可疑程序列表、漏洞列表、健康评分等
+   */
+  scanVirus: async () => {
+    const response = await toolsClient.get('/virus/scan', {
+      timeout: 600000,
+    });
+    return response.data as Result<VirusScanResult>;
+  },
+
+  /**
+   * AI智能分析系统安全状况
+   * <p>先执行完整的系统扫描，然后调用AI对扫描结果进行深度分析，
+   * 提供专业的安全评估、问题诊断和修复建议
+   * <p>当AI服务不可用时，自动降级为本地规则引擎分析
+   * <p>超时时间：10分钟（AI分析可能需要较长时间）
+   * 
+   * @returns AI分析结果，包含安全评估、建议列表、优化方案等
+   */
+  aiAnalyzeVirus: async () => {
+    const response = await toolsClient.get('/virus/ai-analyze', {
+      timeout: 600000,
+    });
+    return response.data as Result<VirusAIAnalysisResult>;
+  },
+
+  /**
+   * 生成修复脚本
+   * <p>根据用户选择的安全问题ID列表，生成Windows批处理修复脚本
+   * <p>脚本内容包含自动修复命令、使用说明和警告信息
+   * <p>超时时间：1分钟
+   * 
+   * @param request 请求参数，包含选中的问题ID列表
+   * @returns 修复脚本信息，包含脚本内容、使用说明、警告信息等
+   */
+  generateRemediationScript: async (request: GenerateRemediationScriptRequest) => {
+    const response = await toolsClient.post('/virus/generate-script', request, {
+      timeout: 60000,
+    });
+    return response.data as Result<RemediationScript>;
+  },
+
+  /**
+   * 下载修复脚本文件
+   * <p>生成修复脚本并以Blob形式返回，支持浏览器直接下载
+   * <p>脚本文件编码：UTF-8，文件名包含时间戳避免重复
+   * <p>超时时间：1分钟
+   * 
+   * @param request 请求参数，包含选中的问题ID列表
+   * @returns Blob对象，可用于创建下载链接
+   */
+  downloadRemediationScript: async (request: GenerateRemediationScriptRequest) => {
+    const response = await toolsClient.post('/virus/download-script', request, {
+      responseType: 'blob',
+      timeout: 60000,
+    });
+    return response.data as Blob;
+  },
+};
+
+export const rulesApi = {
+  getTemplates: async () => {
+    const response = await rulesClient.get('/templates');
+    return response.data as Result<RuleTemplate[]>;
+  },
+
+  getTemplatesByCategory: async (category: string) => {
+    const response = await rulesClient.get(`/templates/category/${category}`);
+    return response.data as Result<RuleTemplate[]>;
+  },
+
+  getSystemTemplates: async () => {
+    const response = await rulesClient.get('/templates/system');
+    return response.data as Result<RuleTemplate[]>;
+  },
+
+  getPublicTemplates: async () => {
+    const response = await rulesClient.get('/templates/public');
+    return response.data as Result<RuleTemplate[]>;
+  },
+
+  getTemplate: async (id: number) => {
+    const response = await rulesClient.get(`/templates/${id}`);
+    return response.data as Result<RuleTemplate>;
+  },
+
+  createTemplate: async (data: Partial<RuleTemplate>) => {
+    const response = await rulesClient.post('/templates', data);
+    return response.data as Result<RuleTemplate>;
+  },
+
+  updateTemplate: async (id: number, data: Partial<RuleTemplate>) => {
+    const response = await rulesClient.put(`/templates/${id}`, data);
+    return response.data as Result<RuleTemplate>;
+  },
+
+  deleteTemplate: async (id: number) => {
+    const response = await rulesClient.delete(`/templates/${id}`);
+    return response.data as Result<void>;
+  },
+
+  copyTemplate: async (id: number) => {
+    const response = await rulesClient.post(`/templates/${id}/copy`);
+    return response.data as Result<RuleTemplate>;
+  },
+
+  getConfigs: async () => {
+    const response = await rulesClient.get('/configs');
+    return response.data as Result<RuleConfig[]>;
+  },
+
+  getConfigsByCategory: async (category: string) => {
+    const response = await rulesClient.get(`/configs/category/${category}`);
+    return response.data as Result<RuleConfig[]>;
+  },
+
+  getConfigsByProject: async (projectPath: string) => {
+    const response = await rulesClient.get(`/configs/project`, { params: { projectPath } });
+    return response.data as Result<RuleConfig[]>;
+  },
+
+  getConfig: async (id: number) => {
+    const response = await rulesClient.get(`/configs/${id}`);
+    return response.data as Result<RuleConfig>;
+  },
+
+  createConfig: async (data: Partial<RuleConfig>) => {
+    const response = await rulesClient.post('/configs', data);
+    return response.data as Result<RuleConfig>;
+  },
+
+  updateConfig: async (id: number, data: Partial<RuleConfig>) => {
+    const response = await rulesClient.put(`/configs/${id}`, data);
+    return response.data as Result<RuleConfig>;
+  },
+
+  deleteConfig: async (id: number) => {
+    const response = await rulesClient.delete(`/configs/${id}`);
+    return response.data as Result<void>;
+  },
+
+  pullRules: async (data: { templateId?: number; configId?: number; conflictStrategy?: string; previewOnly?: boolean }) => {
+    const response = await rulesClient.post('/configs/pull', data);
+    return response.data as Result<RulePullResult>;
+  },
+
+  getConflicts: async () => {
+    const response = await rulesClient.get('/conflicts');
+    return response.data as Result<RulePullLog[]>;
+  },
+
+  getConflict: async (id: number) => {
+    const response = await rulesClient.get(`/conflicts/${id}`);
+    return response.data as Result<RulePullLog>;
+  },
+
+  resolveConflict: async (data: { logId: number; resolutionStrategy: string; mergedContent?: string; renameSuffix?: string }) => {
+    const response = await rulesClient.post('/conflicts/resolve', data);
+    return response.data as Result<RulePullResult>;
+  },
+
+  generateRules: async (data: AIRuleGenerateRequest) => {
+    const response = await rulesClient.post('/ai/generate', data);
+    return response.data as Result<string>;
+  },
+
+  generateAndSaveRules: async (data: AIRuleGenerateRequest) => {
+    const response = await rulesClient.post('/ai/generate/save', data);
+    return response.data as Result<RuleTemplate>;
+  },
+
+  quickGenerateRules: async (category: string, description: string, targetTool?: string) => {
+    const params: Record<string, string> = { category, description };
+    if (targetTool) params.targetTool = targetTool;
+    const response = await rulesClient.get('/ai/quick', { params });
+    return response.data as Result<string>;
   },
 };

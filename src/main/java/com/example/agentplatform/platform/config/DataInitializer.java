@@ -71,5 +71,18 @@ public class DataInitializer implements CommandLineRunner {
             agentRepository.save(knowledgeAgent);
             log.info("初始化个人知识库Agent");
         }
+        
+        if (!agentRepository.existsByCode("agent-rules")) {
+            Agent rulesAgent = Agent.builder()
+                    .name("AI编码规则Agent")
+                    .code("agent-rules")
+                    .description("统一管理您的AI编码规则，支持模板管理、规则拉取、冲突处理、AI生成规则")
+                    .moduleName("agent.rules")
+                    .icon("https://api.iconify.design/material-symbols/rule.svg")
+                    .status(1)
+                    .build();
+            agentRepository.save(rulesAgent);
+            log.info("初始化AI编码规则Agent");
+        }
     }
 }

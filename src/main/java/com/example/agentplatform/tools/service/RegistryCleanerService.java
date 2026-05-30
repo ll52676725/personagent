@@ -1,22 +1,17 @@
 package com.example.agentplatform.tools.service;
 
+import com.example.agentplatform.tools.common.CommandExecutor;
+import com.example.agentplatform.tools.common.JsonUtils;
+import com.example.agentplatform.tools.common.SeverityUtils;
 import com.example.agentplatform.tools.dto.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.ChatClient;
-import org.springframework.ai.chat.ChatResponse;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,19 +22,29 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * 注册表清理服务
+ * <p>提供Windows注册表扫描、无效项检测、清理脚本生成等功能
+ * <p>主要功能包括：
+ * <ul>
+ *   <li>注册表扫描 - 扫描文件关联、启动项、卸载信息、COM组件、服务项等</li>
+ *   <li>无效项检测 - 检测指向不存在文件的注册表项</li>
+ *   <li>AI智能分析 - 基于AI的注册表健康评估和清理建议</li>
+ *   <li>清理脚本生成 - 生成REG文件或BAT文件进行清理</li>
+ * </ul>
+ * 
+ * @author System
+ * @since 2025-01-01
+ * @see com.example.agentplatform.tools.controller.RegistryCleanerController
+ * @see RegistryAnalysisResultDTO
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class RegistryCleanerService {
 
-    private final ChatClient chatClient;
+    private final ToolAIService toolAIService;
     private final ObjectMapper objectMapper;
-
-    @Value("${agent.platform.default-model:spring-ai}")
-    private String modelName;
-
-    @Value("${agent.platform.ai.fallback-enabled:true}")
-    private boolean fallbackEnabled;
 
     private static final String DISCLAIMER = """
         免责声明：
@@ -161,7 +166,7 @@ public class RegistryCleanerService {
         }
 
         allIssues.sort((a, b) -> {
-            int severityCompare = getSeverityOrder(b.getSeverity()) - getSeverityOrder(a.getSeverity());
+            int severityCompare = SeverityUtils.getSeverityOrder(b.getSeverity()) - SeverityUtils.getSeverityOrder(a.getSeverity());
             if (severityCompare != 0) return severityCompare;
             return a.getCategory().compareTo(b.getCategory());
         });
@@ -196,15 +201,6 @@ public class RegistryCleanerService {
                 .issues(allIssues)
                 .disclaimer(DISCLAIMER)
                 .build();
-    }
-
-    private int getSeverityOrder(String severity) {
-        return switch (severity) {
-            case "high" -> 3;
-            case "medium" -> 2;
-            case "low" -> 1;
-            default -> 0;
-        };
     }
 
     private String buildSummary(int totalIssues, Map<String, Integer> severityStats) {
@@ -624,24 +620,11 @@ public class RegistryCleanerService {
 
     private List<String> executeRegCommand(String command) {
         List<String> result = new ArrayList<>();
-        try {
-            ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", command);
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), Charset.forName("GBK")))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (!line.trim().isEmpty() && !line.startsWith("HKEY_")) {
-                        result.add(line.trim());
-                    }
-                }
+        List<String> lines = CommandExecutor.executeCommand(command);
+        for (String line : lines) {
+            if (!line.startsWith("HKEY_")) {
+                result.add(line);
             }
-
-            process.waitFor();
-        } catch (Exception e) {
-            log.debug("执行注册表命令失败: {}", command, e);
         }
         return result;
     }
@@ -785,38 +768,31 @@ public class RegistryCleanerService {
 
         RegistryAnalysisResultDTO analysisResult = analyzeRegistry();
 
-        try {
-            String registryDataJson = buildRegistryAnalysisJson(analysisResult);
+        String registryDataJson = buildRegistryAnalysisJson(analysisResult);
 
-            String userPrompt = String.format("""
-                请分析以下Windows注册表扫描结果：
-                
-                注册表扫描数据：
-                %s
-                
-                请基于以上数据，提供专业的注册表分析报告和清理建议。
-                """, registryDataJson);
+        String userPrompt = String.format("""
+            请分析以下Windows注册表扫描结果：
+            
+            注册表扫描数据：
+            %s
+            
+            请基于以上数据，提供专业的注册表分析报告和清理建议。
+            """, registryDataJson);
 
-            ChatResponse response = callChatApi(AI_REGISTRY_SYSTEM_PROMPT, userPrompt);
-            String content = response.getResult().getOutput().getContent();
-            Integer tokens = response.getMetadata().getUsage() != null ?
-                response.getMetadata().getUsage().getTotalTokens().intValue() : null;
+        ToolAIService.AIResponse<RegistryAIAnalysisResultDTO> response = toolAIService.analyzeWithAI(
+            AI_REGISTRY_SYSTEM_PROMPT,
+            userPrompt,
+            root -> parseRegistryAIResponse(root, analysisResult),
+            () -> fallbackAIRegistryAnalysis(analysisResult, startTime)
+        );
 
-            RegistryAIAnalysisResultDTO result = parseRegistryAIResponse(content, analysisResult);
-            result.setModel(modelName);
-            result.setTokens(tokens);
-            result.setAnalysisDurationMs(System.currentTimeMillis() - startTime);
+        RegistryAIAnalysisResultDTO result = response.getData();
+        result.setModel(response.getModel());
+        result.setTokens(response.getTokens());
+        result.setAnalysisDurationMs(System.currentTimeMillis() - startTime);
 
-            log.info("AI注册表分析完成，token消耗: {}", tokens);
-            return result;
-
-        } catch (Exception e) {
-            log.error("AI分析注册表失败", e);
-            if (fallbackEnabled) {
-                return fallbackAIRegistryAnalysis(analysisResult, startTime);
-            }
-            throw new RuntimeException("AI分析失败: " + e.getMessage());
-        }
+        log.info("AI注册表分析完成，token消耗: {}", response.getTokens());
+        return result;
     }
 
     private String buildRegistryAnalysisJson(RegistryAnalysisResultDTO analysisResult) {
@@ -872,72 +848,40 @@ public class RegistryCleanerService {
             }
             data.put("categories", categories);
 
-            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
+            return JsonUtils.toPrettyJson(objectMapper, data);
         } catch (Exception e) {
             log.error("构建注册表分析JSON失败", e);
             return "{}";
         }
     }
 
-    private RegistryAIAnalysisResultDTO parseRegistryAIResponse(String aiContent, RegistryAnalysisResultDTO analysisResult) {
-        try {
-            String jsonContent = extractJson(aiContent);
-            JsonNode root = objectMapper.readTree(jsonContent);
+    private RegistryAIAnalysisResultDTO parseRegistryAIResponse(JsonNode root, RegistryAnalysisResultDTO analysisResult) {
+        String summary = root.path("summary").asText("");
+        String healthScore = root.path("systemHealthScore").asText("70");
+        String healthLevel = root.path("systemHealthLevel").asText("一般");
+        String insight = root.path("analysisInsight").asText("");
+        String optimization = root.path("optimizationAdvice").asText("");
 
-            String summary = root.path("summary").asText("");
-            String healthScore = root.path("systemHealthScore").asText("70");
-            String healthLevel = root.path("systemHealthLevel").asText("一般");
-            String insight = root.path("analysisInsight").asText("");
-            String optimization = root.path("optimizationAdvice").asText("");
-
-            List<RegistryAISuggestionDTO> suggestions = new ArrayList<>();
-            JsonNode suggestionsNode = root.path("suggestions");
-            if (suggestionsNode.isArray()) {
-                TypeReference<List<RegistryAISuggestionDTO>> typeRef = new TypeReference<List<RegistryAISuggestionDTO>>() {};
-                suggestions = objectMapper.convertValue(suggestionsNode, typeRef);
-                suggestions.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
-            }
-
-            return RegistryAIAnalysisResultDTO.builder()
-                    .summary(summary)
-                    .systemHealthScore(healthScore)
-                    .systemHealthLevel(healthLevel)
-                    .totalIssues(analysisResult.getTotalIssues())
-                    .highRiskCount(analysisResult.getSeverityStats().getOrDefault("high", 0))
-                    .mediumRiskCount(analysisResult.getSeverityStats().getOrDefault("medium", 0))
-                    .lowRiskCount(analysisResult.getSeverityStats().getOrDefault("low", 0))
-                    .suggestions(suggestions)
-                    .analysisInsight(insight)
-                    .optimizationAdvice(optimization)
-                    .build();
-
-        } catch (Exception e) {
-            log.error("解析AI注册表分析响应失败，原始内容: {}", aiContent, e);
-            throw new RuntimeException("AI响应解析失败: " + e.getMessage());
-        }
-    }
-
-    private String extractJson(String content) {
-        if (content == null) return "{}";
-        content = content.trim();
-
-        int firstBrace = content.indexOf('{');
-        int lastBrace = content.lastIndexOf('}');
-
-        if (firstBrace >= 0 && lastBrace > firstBrace) {
-            return content.substring(firstBrace, lastBrace + 1);
+        List<RegistryAISuggestionDTO> suggestions = new ArrayList<>();
+        JsonNode suggestionsNode = root.path("suggestions");
+        if (suggestionsNode.isArray()) {
+            TypeReference<List<RegistryAISuggestionDTO>> typeRef = new TypeReference<List<RegistryAISuggestionDTO>>() {};
+            suggestions = objectMapper.convertValue(suggestionsNode, typeRef);
+            suggestions.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
         }
 
-        return content;
-    }
-
-    private ChatResponse callChatApi(String systemPrompt, String userPrompt) {
-        List<Message> messages = List.of(
-            new SystemMessage(systemPrompt),
-            new UserMessage(userPrompt)
-        );
-        Prompt prompt = new Prompt(messages);
-        return chatClient.call(prompt);
+        return RegistryAIAnalysisResultDTO.builder()
+                .summary(summary)
+                .systemHealthScore(healthScore)
+                .systemHealthLevel(healthLevel)
+                .totalIssues(analysisResult.getTotalIssues())
+                .highRiskCount(analysisResult.getSeverityStats().getOrDefault("high", 0))
+                .mediumRiskCount(analysisResult.getSeverityStats().getOrDefault("medium", 0))
+                .lowRiskCount(analysisResult.getSeverityStats().getOrDefault("low", 0))
+                .suggestions(suggestions)
+                .analysisInsight(insight)
+                .optimizationAdvice(optimization)
+                .build();
     }
 
     private RegistryAIAnalysisResultDTO fallbackAIRegistryAnalysis(

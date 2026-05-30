@@ -607,3 +607,368 @@ export interface IconDesignResult {
   designRationale: string;
   decorativeElements: string[];
 }
+
+/**
+ * 可疑程序数据接口
+ * <p>描述扫描发现的可疑程序的详细信息，包括基本信息、风险评估、
+ * 可疑行为分析和处理建议等
+ */
+export interface SuspiciousProgram {
+  /** 唯一标识符，用于前端选择和操作 */
+  id: string;
+  /** 程序名称 */
+  programName: string;
+  /** 程序文件完整路径 */
+  programPath: string;
+  /** 进程名称（如果正在运行） */
+  processName: string;
+  /** 进程ID（如果正在运行） */
+  processId: number;
+  /** 分类编码：suspicious_process/unknown_startup等 */
+  category: string;
+  /** 分类中文名称，用于界面显示 */
+  categoryLabel: string;
+  /** 风险等级：high（高危）/medium（中危）/low（低危） */
+  severity: string;
+  /** 程序描述信息 */
+  description: string;
+  /** 风险原因分析，说明为什么被判定为可疑 */
+  riskReason: string;
+  /** 可疑行为列表，列举该程序的可疑行为特征 */
+  suspiciousBehaviors: string[];
+  /** 关联的注册表路径（如适用） */
+  registryPath: string;
+  /** 启动类型：自动/手动/禁用等（如适用） */
+  startupType: string;
+  /** 程序发行公司名称 */
+  company: string;
+  /** 文件版本号 */
+  fileVersion: string;
+  /** 文件大小，单位：字节 */
+  fileSize: number;
+  /** 最后修改时间，ISO格式字符串 */
+  lastModified: string;
+  /** 数字签名信息 */
+  digitalSignature: string;
+  /** 是否已签名：true-已签名，false-未签名 */
+  isSigned: boolean;
+  /** 前端是否选中：true-已选中，false-未选中 */
+  selected: boolean;
+  /** 处理建议，说明应该如何处理此程序 */
+  recommendation: string;
+}
+
+/**
+ * 安全漏洞数据接口
+ * <p>描述扫描发现的系统安全漏洞的详细信息，包括漏洞描述、
+ * 受影响组件、风险评估和修复步骤等
+ */
+export interface Vulnerability {
+  /** 唯一标识符，用于前端选择和操作 */
+  id: string;
+  /** 漏洞官方编号，如CVE编号等 */
+  vulnerabilityId: string;
+  /** 漏洞标题，简要描述漏洞内容 */
+  title: string;
+  /** 分类编码：os_vulnerability/open_port等 */
+  category: string;
+  /** 分类中文名称，用于界面显示 */
+  categoryLabel: string;
+  /** 风险等级：high（高危）/medium（中危）/low（低危） */
+  severity: string;
+  /** 漏洞详细描述，说明漏洞原理和影响 */
+  description: string;
+  /** 受影响的组件名称，如操作系统、软件名称等 */
+  affectedComponent: string;
+  /** 当前安装的版本号 */
+  installedVersion: string;
+  /** 修复此漏洞的版本号 */
+  fixedVersion: string;
+  /** CVSS评分，0-10分，分数越高越严重 */
+  cvssScore: string;
+  /** CVE漏洞编号，如CVE-2025-0001 */
+  cveId: string;
+  /** 漏洞发布日期，ISO格式字符串 */
+  publishDate: string;
+  /** 检测方法，说明如何发现此漏洞 */
+  detectionMethod: string;
+  /** 修复步骤列表，按顺序执行可修复此漏洞 */
+  remediationSteps: string[];
+  /** 风险等级说明：critical/high/medium/low */
+  riskLevel: string;
+  /** 漏洞利用状态：是否已有公开利用代码 */
+  exploitStatus: string;
+  /** 前端是否选中：true-已选中，false-未选中 */
+  selected: boolean;
+}
+
+/**
+ * 病毒扫描结果数据接口
+ * <p>包含完整的系统安全扫描结果，包括可疑程序列表、安全漏洞列表、
+ * 统计信息、健康评分等
+ */
+export interface VirusScanResult {
+  /** 扫描结果摘要，简要说明发现的问题和整体安全状况 */
+  summary: string;
+  /** 系统健康等级：优秀/良好/一般/较差/危险 */
+  systemHealthLevel: string;
+  /** 系统健康评分，0-100分，分数越高越安全 */
+  systemHealthScore: number;
+  /** 扫描耗时，单位：毫秒 */
+  scanDurationMs: number;
+  /** 发现的可疑程序总数 */
+  totalSuspiciousPrograms: number;
+  /** 发现的安全漏洞总数 */
+  totalVulnerabilities: number;
+  /** 高危问题数量 */
+  highRiskCount: number;
+  /** 中危问题数量 */
+  mediumRiskCount: number;
+  /** 低危问题数量 */
+  lowRiskCount: number;
+  /** 可疑程序按分类统计，key为分类编码，value为数量 */
+  programCategoryStats: Record<string, number>;
+  /** 安全漏洞按分类统计，key为分类编码，value为数量 */
+  vulnerabilityCategoryStats: Record<string, number>;
+  /** 按风险等级统计，key为等级（high/medium/low），value为数量 */
+  severityStats: Record<string, number>;
+  /** 可疑程序详细列表 */
+  suspiciousPrograms: SuspiciousProgram[];
+  /** 安全漏洞详细列表 */
+  vulnerabilities: Vulnerability[];
+  /** 免责声明，提示用户工具的局限性 */
+  disclaimer: string;
+  /** 扫描完成时间，ISO格式字符串 */
+  scanTime: string;
+}
+
+/**
+ * AI安全建议数据接口
+ * <p>AI针对某一类安全问题给出的专业建议，包括问题描述、
+ * 风险分析、处理建议和修复步骤等
+ */
+export interface VirusAISuggestion {
+  /** 问题分类编码 */
+  category: string;
+  /** 分类中文名称，用于界面显示 */
+  categoryLabel: string;
+  /** 建议标题，简要说明需要处理的问题 */
+  title: string;
+  /** 问题详细描述，说明具体存在哪些安全问题 */
+  description: string;
+  /** 受影响的程序或组件列表 */
+  affectedPrograms: string[];
+  /** 此类问题的数量 */
+  issueCount: number;
+  /** 风险等级：high（高危）/medium（中危）/low（低危） */
+  riskLevel: string;
+  /** 建议采取的行动：立即处理/尽快处理/建议优化 */
+  action: string;
+  /** 建议理由，说明为什么需要处理此问题 */
+  reason: string;
+  /** 优先级，1-10，数字越大优先级越高 */
+  priority: number;
+  /** 处理后的预期效果说明 */
+  impact: string;
+  /** 注意事项，处理此问题时需要注意的风险点 */
+  precaution: string;
+  /** 具体修复步骤列表，按顺序执行可修复此类问题 */
+  remediationSteps: string[];
+}
+
+/**
+ * AI安全分析结果数据接口
+ * <p>AI对系统安全状况的完整分析报告，包括整体评估、
+ * 安全建议列表、优化方案等
+ */
+export interface VirusAIAnalysisResult {
+  /** 分析结果摘要，简要说明系统安全状况 */
+  summary: string;
+  /** 系统健康评分，0-100的字符串 */
+  systemHealthScore: string;
+  /** 系统健康等级：优秀/良好/一般/较差/危险 */
+  systemHealthLevel: string;
+  /** AI深度分析见解，说明发现的主要安全问题及其可能的影响 */
+  analysisInsight: string;
+  /** 全面的安全评估，说明当前系统面临的主要威胁 */
+  securityAssessment: string;
+  /** 系统安全优化建议，包括安全配置、防护软件、安全习惯等 */
+  optimizationAdvice: string;
+  /** 安全问题总数 */
+  totalIssues: number;
+  /** 高危问题数量 */
+  highRiskCount: number;
+  /** 中危问题数量 */
+  mediumRiskCount: number;
+  /** 低危问题数量 */
+  lowRiskCount: number;
+  /** AI安全建议列表，按优先级排序 */
+  suggestions: VirusAISuggestion[];
+  /** 使用的AI模型名称，fallback表示使用本地规则引擎 */
+  model?: string;
+  /** Token消耗数量（AI模式下） */
+  tokens?: number;
+  /** 分析耗时，单位：毫秒 */
+  analysisDurationMs: number;
+}
+
+/**
+ * 修复脚本数据接口
+ * <p>包含自动生成的系统修复脚本信息，包括脚本内容、
+ * 使用说明、警告信息等
+ */
+export interface RemediationScript {
+  /** 脚本文件名，如：virus_remediation_123456.bat */
+  scriptName: string;
+  /** 脚本内容，完整的批处理脚本代码 */
+  scriptContent: string;
+  /** 脚本类型：BAT（Windows批处理）/PS1（PowerShell）/SH（Linux Shell） */
+  scriptType: string;
+  /** 脚本编码格式：UTF-8/GBK等 */
+  encoding: string;
+  /** 本次脚本修复的问题数量 */
+  issueCount: number;
+  /** 修复的问题列表，包含所有将被此脚本处理的问题描述 */
+  fixedIssues: string[];
+  /** 警告信息，提示用户执行脚本前需要注意的事项 */
+  warning: string;
+  /** 使用说明，指导用户如何正确使用此修复脚本 */
+  usageInstructions: string;
+}
+
+/**
+ * 生成修复脚本请求数据接口
+ * <p>用于封装前端生成修复脚本的请求参数，指定需要修复的问题ID列表
+ */
+export interface GenerateRemediationScriptRequest {
+  /** 选中的问题ID列表，包含需要生成修复脚本的所有问题的唯一标识 */
+  selectedIssueIds: string[];
+}
+
+/**
+ * 规则分类
+ */
+export type RuleCategory = 'global' | 'project' | 'coding_standard' | 'documentation' | 'ai_tool';
+
+/**
+ * 规则模板数据接口
+ */
+export interface RuleTemplate {
+  id: number;
+  userId: number;
+  name: string;
+  description?: string;
+  category: RuleCategory;
+  sourceType: string;
+  targetTool?: string;
+  fileName: string;
+  filePath?: string;
+  content?: string;
+  variables?: string;
+  version?: string;
+  isSystem: boolean;
+  isPublic: boolean;
+  useCount: number;
+  status: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 规则配置数据接口
+ */
+export interface RuleConfig {
+  id: number;
+  userId: number;
+  templateId?: number;
+  projectPath?: string;
+  category: RuleCategory;
+  targetTool?: string;
+  fileName: string;
+  targetPath: string;
+  content?: string;
+  conflictStrategy: string;
+  fileHash?: string;
+  lastPullAt?: string;
+  pullCount: number;
+  isActive: boolean;
+  status: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 规则拉取日志数据接口
+ */
+export interface RulePullLog {
+  id: number;
+  userId: number;
+  configId?: number;
+  templateId?: number;
+  operationType: string;
+  targetPath: string;
+  hasConflict: boolean;
+  conflictType?: string;
+  conflictStrategy?: string;
+  localContent?: string;
+  remoteContent?: string;
+  mergedContent?: string;
+  diffResult?: string;
+  mergeSuccessful?: boolean;
+  status: string;
+  errorMessage?: string;
+  operator?: string;
+  createdAt: string;
+}
+
+/**
+ * 规则拉取结果数据接口
+ */
+export interface RulePullResult {
+  logId: number;
+  configId?: number;
+  status: string;
+  hasConflict: boolean;
+  conflictType?: string;
+  conflictStrategy?: string;
+  targetPath?: string;
+  localContent?: string;
+  remoteContent?: string;
+  mergedContent?: string;
+  diffResult?: string;
+  message?: string;
+}
+
+/**
+ * 规则分类选项
+ */
+export interface RuleCategoryOption {
+  code: RuleCategory;
+  label: string;
+  icon: string;
+  description: string;
+}
+
+/**
+ * 冲突处理策略选项
+ */
+export interface ConflictStrategyOption {
+  code: string;
+  label: string;
+  description: string;
+  color: string;
+}
+
+/**
+ * AI规则生成请求数据接口
+ */
+export interface AIRuleGenerateRequest {
+  category: RuleCategory;
+  targetTool?: string;
+  description: string;
+  projectType?: string;
+  codingLanguage?: string;
+  additionalRequirements?: string;
+  fileName?: string;
+  saveAsTemplate?: boolean;
+}

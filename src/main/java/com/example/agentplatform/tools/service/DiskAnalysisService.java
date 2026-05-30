@@ -1,17 +1,14 @@
 package com.example.agentplatform.tools.service;
 
+import com.example.agentplatform.tools.common.FileUtils;
+import com.example.agentplatform.tools.common.JsonUtils;
+import com.example.agentplatform.tools.common.SeverityUtils;
 import com.example.agentplatform.tools.dto.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.ChatClient;
-import org.springframework.ai.chat.ChatResponse;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +20,22 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+/**
+ * 磁盘分析服务
+ * <p>提供磁盘空间分析、文件分类统计、大文件检测、AI智能分析等功能
+ * <p>主要功能包括：
+ * <ul>
+ *   <li>磁盘空间分析 - 分析磁盘使用情况、可用空间、文件类型分布</li>
+ *   <li>大文件检测 - 自动识别并按大小排序的大文件列表</li>
+ *   <li>重复文件检测 - 基于文件大小的重复文件检测</li>
+ *   <li>AI智能分析 - 基于AI的磁盘空间优化建议</li>
+ * </ul>
+ * 
+ * @author System
+ * @since 2025-01-01
+ * @see com.example.agentplatform.tools.controller.DiskAnalysisController
+ * @see DriveAnalysisResultDTO
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -32,14 +45,8 @@ public class DiskAnalysisService {
     private static final int MAX_DEPTH = 6;
     private static final int TOP_FOLDERS_LIMIT = 15;
 
-    private final ChatClient chatClient;
+    private final ToolAIService toolAIService;
     private final ObjectMapper objectMapper;
-
-    @Value("${agent.platform.default-model:spring-ai}")
-    private String modelName;
-
-    @Value("${agent.platform.ai.fallback-enabled:true}")
-    private boolean fallbackEnabled;
 
     private static final Map<String, String> EXTENSION_CATEGORY_MAP = new HashMap<>();
     private static final Map<String, String> CATEGORY_LABEL_MAP = new LinkedHashMap<>();
@@ -561,11 +568,7 @@ public class DiskAnalysisService {
     }
 
     private String formatSize(long bytes) {
-        if (bytes < 1024) return bytes + " B";
-        if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
-        if (bytes < 1024L * 1024 * 1024) return String.format("%.1f MB", bytes / (1024.0 * 1024));
-        if (bytes < 1024L * 1024 * 1024 * 1024) return String.format("%.1f GB", bytes / (1024.0 * 1024 * 1024));
-        return String.format("%.1f TB", bytes / (1024.0 * 1024 * 1024 * 1024));
+        return FileUtils.formatFileSize(bytes);
     }
 
     private static final String AI_ANALYSIS_SYSTEM_PROMPT = """
@@ -620,38 +623,31 @@ public class DiskAnalysisService {
 
         DriveAnalysisResultDTO analysisResult = analyzeDrive(driveLetter, maxDepth);
 
-        try {
-            String diskStructureJson = buildDiskStructureJson(driveLetter, analysisResult);
+        String diskStructureJson = buildDiskStructureJson(driveLetter, analysisResult);
 
-            String userPrompt = String.format("""
-                请分析以下 %s 盘的磁盘空间使用情况：
-                
-                磁盘结构数据：
-                %s
-                
-                请基于以上数据，提供详细的空间释放建议。
-                """, driveLetter, diskStructureJson);
+        String userPrompt = String.format("""
+            请分析以下 %s 盘的磁盘空间使用情况：
+            
+            磁盘结构数据：
+            %s
+            
+            请基于以上数据，提供详细的空间释放建议。
+            """, driveLetter, diskStructureJson);
 
-            ChatResponse response = callChatApi(AI_ANALYSIS_SYSTEM_PROMPT, userPrompt);
-            String content = response.getResult().getOutput().getContent();
-            Integer tokens = response.getMetadata().getUsage() != null ?
-                response.getMetadata().getUsage().getTotalTokens().intValue() : null;
+        ToolAIService.AIResponse<AIAnalysisResultDTO> response = toolAIService.analyzeWithAI(
+                AI_ANALYSIS_SYSTEM_PROMPT,
+                userPrompt,
+                root -> parseAIResponse(driveLetter, root),
+                () -> fallbackAIAnalysis(driveLetter, analysisResult, startTime)
+        );
 
-            AIAnalysisResultDTO result = parseAIResponse(driveLetter, content);
-            result.setModel(modelName);
-            result.setTokens(tokens);
-            result.setAnalysisDurationMs(System.currentTimeMillis() - startTime);
+        AIAnalysisResultDTO result = response.getData();
+        result.setModel(response.getModel());
+        result.setTokens(response.getTokens());
+        result.setAnalysisDurationMs(System.currentTimeMillis() - startTime);
 
-            log.info("AI分析盘符 {} 完成，token消耗: {}", driveLetter, tokens);
-            return result;
-
-        } catch (Exception e) {
-            log.error("AI分析盘符失败: {}", driveLetter, e);
-            if (fallbackEnabled) {
-                return fallbackAIAnalysis(driveLetter, analysisResult, startTime);
-            }
-            throw new RuntimeException("AI分析失败: " + e.getMessage());
-        }
+        log.info("AI分析盘符 {} 完成，token消耗: {}", driveLetter, response.getTokens());
+        return result;
     }
 
     private String buildDiskStructureJson(String driveLetter, DriveAnalysisResultDTO analysisResult) {
@@ -714,65 +710,33 @@ public class DiskAnalysisService {
             scanInfo.put("totalScannedFiles", analysisResult.getTotalScannedFiles());
             structure.put("scanInfo", scanInfo);
 
-            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(structure);
+            return JsonUtils.toPrettyJson(objectMapper, structure);
         } catch (Exception e) {
             log.error("构建磁盘结构JSON失败", e);
             return "{}";
         }
     }
 
-    private AIAnalysisResultDTO parseAIResponse(String driveLetter, String aiContent) {
-        try {
-            String jsonContent = extractJson(aiContent);
-            JsonNode root = objectMapper.readTree(jsonContent);
+    private AIAnalysisResultDTO parseAIResponse(String driveLetter, JsonNode root) {
+        String summary = root.path("summary").asText("");
+        long totalReclaimable = root.path("totalReclaimableSpace").asLong(0);
+        String insight = root.path("analysisInsight").asText("");
 
-            String summary = root.path("summary").asText("");
-            long totalReclaimable = root.path("totalReclaimableSpace").asLong(0);
-            String insight = root.path("analysisInsight").asText("");
-
-            List<AICleanupSuggestionDTO> suggestions = new ArrayList<>();
-            JsonNode suggestionsNode = root.path("suggestions");
-            if (suggestionsNode.isArray()) {
-                TypeReference<List<AICleanupSuggestionDTO>> typeRef = new TypeReference<List<AICleanupSuggestionDTO>>() {};
-                suggestions = objectMapper.convertValue(suggestionsNode, typeRef);
-                suggestions.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
-            }
-
-            return AIAnalysisResultDTO.builder()
-                    .driveLetter(driveLetter)
-                    .summary(summary)
-                    .totalReclaimableSpace(totalReclaimable)
-                    .suggestions(suggestions)
-                    .analysisInsight(insight)
-                    .build();
-
-        } catch (Exception e) {
-            log.error("解析AI响应失败，原始内容: {}", aiContent, e);
-            throw new RuntimeException("AI响应解析失败: " + e.getMessage());
-        }
-    }
-
-    private String extractJson(String content) {
-        if (content == null) return "{}";
-        content = content.trim();
-
-        int firstBrace = content.indexOf('{');
-        int lastBrace = content.lastIndexOf('}');
-
-        if (firstBrace >= 0 && lastBrace > firstBrace) {
-            return content.substring(firstBrace, lastBrace + 1);
+        List<AICleanupSuggestionDTO> suggestions = new ArrayList<>();
+        JsonNode suggestionsNode = root.path("suggestions");
+        if (suggestionsNode.isArray()) {
+            TypeReference<List<AICleanupSuggestionDTO>> typeRef = new TypeReference<List<AICleanupSuggestionDTO>>() {};
+            suggestions = objectMapper.convertValue(suggestionsNode, typeRef);
+            suggestions.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
         }
 
-        return content;
-    }
-
-    private ChatResponse callChatApi(String systemPrompt, String userPrompt) {
-        List<Message> messages = List.of(
-            new SystemMessage(systemPrompt),
-            new UserMessage(userPrompt)
-        );
-        Prompt prompt = new Prompt(messages);
-        return chatClient.call(prompt);
+        return AIAnalysisResultDTO.builder()
+                .driveLetter(driveLetter)
+                .summary(summary)
+                .totalReclaimableSpace(totalReclaimable)
+                .suggestions(suggestions)
+                .analysisInsight(insight)
+                .build();
     }
 
     private AIAnalysisResultDTO fallbackAIAnalysis(String driveLetter,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, CheckCircle, Clock, XCircle, Send, AlertCircle } from 'lucide-react';
+import { Sparkles, CheckCircle, Clock, XCircle, Send, AlertCircle, Bot } from 'lucide-react';
 import { agentApi } from '@/api';
 import { Agent } from '@/types';
 
@@ -76,83 +76,106 @@ export default function AgentList() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <Sparkles className="w-8 h-8 text-white" />
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center animate-scaleIn">
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 rounded-3xl animate-pulse" />
+            <div className="absolute inset-1 bg-[#0a0f1a] rounded-[1.3rem] flex items-center justify-center">
+              <Bot className="w-10 h-10 text-white" />
+            </div>
           </div>
-          <p className="text-gray-400">加载中...</p>
+          <p className="text-gray-400 animate-pulse">加载中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-white">Agent 列表</h1>
-        <p className="text-gray-400 mt-1">浏览和申请使用平台上的智能 Agent</p>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-card-strong mb-3">
+          <Bot className="w-4 h-4 text-cyan-400" />
+          <span className="text-sm text-cyan-400 font-medium">智能助手中心</span>
+        </div>
+        <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">
+          Agent<span className="gradient-text-aurora">列表</span>
+        </h1>
+        <p className="text-gray-400 text-lg">
+          浏览和申请使用平台上的智能 Agent
+        </p>
       </div>
 
       {agents.length === 0 ? (
-        <div className="glass-card rounded-3xl p-12 text-center">
-          <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-            <Sparkles className="w-10 h-10 text-gray-500" />
+        <div className="relative overflow-hidden rounded-3xl glass-card-strong py-20">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-violet-500/20 to-transparent rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-indigo-500/15 to-transparent rounded-full blur-2xl" />
+          <div className="relative text-center">
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/20 to-indigo-500/20 rounded-full animate-pulse" />
+              <div className="absolute inset-2 glass-card rounded-full flex items-center justify-center">
+                <Bot className="w-10 h-10 text-gray-400" />
+              </div>
+            </div>
+            <h3 className="text-white font-semibold text-xl mb-2">暂无可用 Agent</h3>
+            <p className="text-gray-400 text-lg">系统正在准备中，请稍后再来查看</p>
           </div>
-          <h3 className="text-white font-semibold text-lg mb-2">暂无可用 Agent</h3>
-          <p className="text-gray-400">系统正在准备中，请稍后再来查看</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {agents.map((agent, index) => {
             const permission = permissions.get(agent.id) || { status: -1 };
             const statusInfo = getStatusInfo(permission.status);
             const StatusIcon = statusInfo.icon;
             
             return (
-              <div 
+              <div
                 key={agent.id}
-                className="glass-card rounded-3xl p-6 glass-card-hover animate-fadeIn opacity-0"
-                style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'forwards' }}
+                className="group relative overflow-hidden rounded-2xl glass-card glass-card-hover p-5 animate-fadeIn opacity-0"
+                style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'forwards' }}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg">
-                    <Sparkles className="w-7 h-7 text-white" />
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+                <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-violet-500/10 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                
+                <div className="relative">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/25 group-hover:scale-110 transition-transform duration-300">
+                      <Sparkles className="w-6 h-6 text-white" />
+                    </div>
+                    <span className={`relative px-2.5 py-1 text-xs rounded-full font-medium overflow-hidden ${statusInfo.bg} ${statusInfo.color} border border-white/10 flex items-center gap-1`}>
+                      <StatusIcon className="w-3 h-3" />
+                      {statusInfo.label}
+                    </span>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusInfo.bg} ${statusInfo.color} flex items-center gap-1`}>
-                    <StatusIcon className="w-3 h-3" />
-                    {statusInfo.label}
-                  </span>
-                </div>
-                
-                <h3 className="text-lg font-semibold text-white mb-2">{agent.name}</h3>
-                <p className="text-gray-400 text-sm mb-4 line-clamp-2">{agent.description}</p>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">模块: {agent.moduleName}</span>
-                  {permission.status === 1 ? (
-                    <button 
-                      className="btn-primary text-sm px-4 py-2"
-                      onClick={() => {}}
-                    >
-                      立即使用
-                    </button>
-                  ) : permission.status === 0 ? (
-                    <button 
-                      className="btn-secondary text-sm px-4 py-2 cursor-not-allowed opacity-70"
-                      disabled
-                    >
-                      审核中...
-                    </button>
-                  ) : (
-                    <button 
-                      className="btn-secondary text-sm px-4 py-2 flex items-center gap-2"
-                      onClick={() => setApplyModal(agent.id)}
-                    >
-                      <Send className="w-4 h-4" />
-                      申请使用
-                    </button>
-                  )}
+                  
+                  <h3 className="font-semibold text-white text-lg mb-2">{agent.name}</h3>
+                  <p className="text-gray-400 text-sm mb-4 line-clamp-2 h-10">{agent.description}</p>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">模块: {agent.moduleName}</span>
+                    {permission.status === 1 ? (
+                      <button 
+                        className="btn-primary text-sm px-4 py-2"
+                        onClick={() => {}}
+                      >
+                        立即使用
+                      </button>
+                    ) : permission.status === 0 ? (
+                      <button 
+                        className="btn-secondary text-sm px-4 py-2 cursor-not-allowed opacity-70"
+                        disabled
+                      >
+                        审核中...
+                      </button>
+                    ) : (
+                      <button 
+                        className="btn-secondary text-sm px-4 py-2 flex items-center gap-2"
+                        onClick={() => setApplyModal(agent.id)}
+                      >
+                        <Send className="w-4 h-4" />
+                        申请使用
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -162,44 +185,49 @@ export default function AgentList() {
 
       {applyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setApplyModal(null); setApplyReason(''); setError(''); }} />
-          <div className="relative glass-card rounded-3xl p-6 w-full max-w-md animate-fadeIn">
-            <h3 className="text-xl font-bold text-white mb-2">申请使用 Agent</h3>
-            <p className="text-gray-400 text-sm mb-4">请填写申请理由，审核通过后即可使用</p>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => { setApplyModal(null); setApplyReason(''); setError(''); }} />
+          <div className="relative glass-card-strong rounded-3xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col animate-scaleIn shadow-2xl">
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-violet-500/20 to-transparent rounded-full blur-2xl" />
             
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-4 text-red-300 text-sm animate-fadeIn">
-                {error}
-              </div>
-            )}
-            
-            <textarea
-              value={applyReason}
-              onChange={(e) => {
-                setApplyReason(e.target.value);
-                setError('');
-              }}
-              className="input-field w-full h-32 resize-none"
-              placeholder="请说明您的使用场景和需求..."
-            />
-            
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setApplyModal(null);
-                  setApplyReason('');
+            <div className="p-6 relative">
+              <h3 className="text-xl font-bold text-white mb-2">申请使用 Agent</h3>
+              <p className="text-gray-400 text-sm mb-4">请填写申请理由，审核通过后即可使用</p>
+              
+              {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm animate-fadeIn">
+                  {error}
+                </div>
+              )}
+              
+              <textarea
+                value={applyReason}
+                onChange={(e) => {
+                  setApplyReason(e.target.value);
                   setError('');
                 }}
-                className="flex-1 btn-secondary"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => handleApply(applyModal)}
-                className="flex-1 btn-primary"
-              >
-                提交申请
-              </button>
+                className="input-field w-full h-32 resize-none mt-4"
+                placeholder="请说明您的使用场景和需求..."
+              />
+              
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setApplyModal(null);
+                    setApplyReason('');
+                    setError('');
+                  }}
+                  className="flex-1 btn-secondary"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => handleApply(applyModal)}
+                  className="flex-1 btn-primary"
+                >
+                  提交申请
+                </button>
+              </div>
             </div>
           </div>
         </div>

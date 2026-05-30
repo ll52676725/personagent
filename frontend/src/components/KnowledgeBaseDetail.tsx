@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Trash2, FileText, RefreshCw, ChevronLeft, X, Upload, Globe, FileUp, FileType, FileSpreadsheet, Presentation, Image, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, FileText, RefreshCw, ChevronLeft, X, Upload, Globe, FileUp, FileType, FileSpreadsheet, Presentation, Image, AlertCircle, BookOpen, ArrowRight } from 'lucide-react';
 import { knowledgeApi } from '@/api';
 import { KnowledgeBase, KnowledgeItem } from '@/types';
 
@@ -253,68 +253,108 @@ export default function KnowledgeBaseDetail() {
   ];
 
   if (loading) {
-    return <div className="flex items-center justify-center h-96"><p className="text-gray-400">加载中...</p></div>;
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center animate-scaleIn">
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-cyan-400 rounded-3xl animate-pulse" />
+            <div className="absolute inset-1 bg-[#0a0f1a] rounded-[1.3rem] flex items-center justify-center">
+              <BookOpen className="w-10 h-10 text-white" />
+            </div>
+          </div>
+          <p className="text-gray-400 animate-pulse">加载中...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/knowledge/bases')} className="p-2 rounded-xl hover:bg-white/5 text-gray-400"><ChevronLeft className="w-6 h-6" /></button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold text-white">{base?.name || '知识库'}</h1>
-          <p className="text-gray-400 mt-1">{base?.description || '暂无描述'} · {items.length} 条知识</p>
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate('/knowledge/bases')} className="p-2 rounded-xl hover:bg-white/5 text-gray-400 transition-colors"><ChevronLeft className="w-6 h-6" /></button>
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-card-strong mb-3">
+              <BookOpen className="w-4 h-4 text-cyan-400" />
+              <span className="text-sm text-cyan-400 font-medium">知识库管理</span>
+            </div>
+            <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">
+              {base?.name || '知识库'}<span className="gradient-text-aurora">详情</span>
+            </h1>
+            <p className="text-gray-400 text-lg">
+              {base?.description || '暂无描述'} · {items.length} 条知识
+            </p>
+          </div>
         </div>
-        <button onClick={() => { setShowAdd(true); setAddMode('file'); }} className="btn-primary flex items-center gap-2">
-          <Plus className="w-5 h-5" />添加知识
+        <button onClick={() => { setShowAdd(true); setAddMode('file'); }} className="btn-primary flex items-center gap-2 self-start md:self-auto text-base px-6 py-3.5 group">
+          <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />添加知识
         </button>
       </div>
 
       {items.length === 0 ? (
-        <div className="glass-card rounded-3xl p-12 text-center">
-          <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-            <FileUp className="w-10 h-10 text-gray-500" />
-          </div>
-          <h3 className="text-white font-semibold text-lg mb-2">暂无知识条目</h3>
-          <p className="text-gray-400 mb-6">上传文档、输入文本或导入网页，开始构建知识库</p>
-          <div className="flex items-center justify-center gap-3 text-sm text-gray-500">
-            <span className="flex items-center gap-1"><FileType className="w-4 h-4" /> PDF</span>
-            <span className="flex items-center gap-1"><FileType className="w-4 h-4" /> Word</span>
-            <span className="flex items-center gap-1"><Presentation className="w-4 h-4" /> PPT</span>
-            <span className="flex items-center gap-1"><FileSpreadsheet className="w-4 h-4" /> Excel</span>
-            <span className="flex items-center gap-1"><Globe className="w-4 h-4" /> URL</span>
+        <div className="relative overflow-hidden rounded-3xl glass-card-strong py-20">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-cyan-500/20 to-transparent rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-indigo-500/15 to-transparent rounded-full blur-2xl" />
+          <div className="relative text-center">
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 rounded-full animate-pulse" />
+              <div className="absolute inset-2 glass-card rounded-full flex items-center justify-center">
+                <FileUp className="w-10 h-10 text-gray-400" />
+              </div>
+            </div>
+            <h3 className="text-white font-semibold text-xl mb-2">暂无知识条目</h3>
+            <p className="text-gray-400 mb-6 text-lg">上传文档、输入文本或导入网页，开始构建知识库</p>
+            <div className="flex items-center justify-center gap-3 text-sm text-gray-500 mb-6">
+              <span className="flex items-center gap-1"><FileType className="w-4 h-4" /> PDF</span>
+              <span className="flex items-center gap-1"><FileType className="w-4 h-4" /> Word</span>
+              <span className="flex items-center gap-1"><Presentation className="w-4 h-4" /> PPT</span>
+              <span className="flex items-center gap-1"><FileSpreadsheet className="w-4 h-4" /> Excel</span>
+              <span className="flex items-center gap-1"><Globe className="w-4 h-4" /> URL</span>
+            </div>
+            <button
+              onClick={() => { setShowAdd(true); setAddMode('file'); }}
+              className="group text-cyan-400 hover:text-cyan-300 font-medium transition-colors inline-flex items-center gap-2"
+            >
+              点击添加第一条知识
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {items.map((item, index) => {
             const status = chunkStatusMap[item.chunkStatus] || chunkStatusMap[0];
             return (
-              <div key={item.id} className="glass-card rounded-2xl p-4 glass-card-hover animate-fadeIn opacity-0" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'forwards' }}>
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center flex-shrink-0">
-                    {getSourceIcon(item)}
-                  </div>
-                  <div className="flex-1 min-w-0">
+              <div key={item.id} className="group relative overflow-hidden rounded-2xl glass-card glass-card-hover p-5 animate-fadeIn opacity-0" style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'forwards' }}>
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+                <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-cyan-500/10 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="relative">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-400 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/25 group-hover:scale-110 transition-transform duration-300">
+                      {getSourceIcon(item)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-white font-medium text-lg truncate">{item.title}</h3>
+                        {getSourceBadge(item)}
+                        <span className={`text-xs ${status.color}`}>{status.label}</span>
+                      </div>
+                      <p className="text-gray-400 text-sm mt-1.5 line-clamp-2 leading-relaxed">{item.content?.substring(0, 150) || '暂无内容'}</p>
+                      <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                        {item.category && <span>分类: {item.category}</span>}
+                        {item.tags && <span>标签: {item.tags}</span>}
+                        {item.fileSize && <span>大小: {formatFileSize(item.fileSize)}</span>}
+                        <span>{item.chunkCount} 片段</span>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-white font-medium truncate">{item.title}</h3>
-                      {getSourceBadge(item)}
-                      <span className={`text-xs ${status.color}`}>{status.label}</span>
+                      <button onClick={() => handleReprocess(item.id)} className="p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-cyan-400 transition-all duration-300 group/reprocess" title="重新处理">
+                        <RefreshCw className="w-5 h-5 group-hover/reprocess:rotate-180 transition-transform duration-500" />
+                      </button>
+                      <button onClick={() => handleDelete(item.id)} className="p-2.5 rounded-xl hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all duration-300 group/delete" title="删除">
+                        <Trash2 className="w-5 h-5 group-hover/delete:scale-110 transition-transform" />
+                      </button>
                     </div>
-                    <p className="text-gray-400 text-sm mt-1 line-clamp-2">{item.content?.substring(0, 150) || '暂无内容'}</p>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                      {item.category && <span>分类: {item.category}</span>}
-                      {item.tags && <span>标签: {item.tags}</span>}
-                      {item.fileSize && <span>大小: {formatFileSize(item.fileSize)}</span>}
-                      <span>{item.chunkCount} 片段</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => handleReprocess(item.id)} className="p-2 rounded-xl hover:bg-white/5 text-gray-400 hover:text-cyan-400 transition-all" title="重新处理">
-                      <RefreshCw className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDelete(item.id)} className="p-2 rounded-xl hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all" title="删除">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
               </div>
@@ -325,28 +365,34 @@ export default function KnowledgeBaseDetail() {
 
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowAdd(false); resetForm(); }} />
-          <div className="relative glass-card rounded-3xl p-6 w-full max-w-xl animate-fadeIn max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => { setShowAdd(false); resetForm(); }} />
+          <div className="relative glass-card-strong rounded-3xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col animate-scaleIn shadow-2xl">
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-indigo-500/20 to-transparent rounded-full blur-2xl" />
+            
+            <div className="flex items-center justify-between p-6 border-b border-white/5 flex-shrink-0 relative">
               <h3 className="text-xl font-bold text-white">添加知识</h3>
-              <button onClick={() => { setShowAdd(false); resetForm(); }} className="p-2 rounded-xl hover:bg-white/5 text-gray-400"><X className="w-5 h-5" /></button>
+              <button onClick={() => { setShowAdd(false); resetForm(); }} className="p-2 hover:bg-white/5 rounded-xl text-gray-400 hover:text-white transition-colors flex-shrink-0">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-
-            <div className="flex gap-1 mb-5 p-1 bg-white/5 rounded-xl">
-              {tabs.map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => { setAddMode(tab.key); setError(''); }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
-                    addMode === tab.key
-                      ? 'bg-gradient-to-r from-indigo-500 to-cyan-400 text-white shadow-lg'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {tab.icon}{tab.label}
-                </button>
-              ))}
-            </div>
+            
+            <div className="p-6 overflow-y-auto relative">
+              <div className="flex gap-1 mb-5 p-1 bg-white/5 rounded-xl">
+                {tabs.map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => { setAddMode(tab.key); setError(''); }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
+                      addMode === tab.key
+                        ? 'bg-gradient-to-r from-indigo-500 to-cyan-400 text-white shadow-lg shadow-indigo-500/25'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {tab.icon}{tab.label}
+                  </button>
+                ))}
+              </div>
 
             {error && (
               <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-4 text-red-300 text-sm">
@@ -356,65 +402,76 @@ export default function KnowledgeBaseDetail() {
             )}
 
             {addMode === 'manual' && (
-              <div className="space-y-4">
-                <input value={newTitle} onChange={(e) => { setNewTitle(e.target.value); setError(''); }} className="input-field w-full" placeholder="知识标题" />
-                <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} className="input-field w-full h-48 resize-none" placeholder="知识内容（支持 Markdown）" />
-                <div className="grid grid-cols-2 gap-3">
-                  <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="input-field" placeholder="分类（可选）" />
-                  <input value={newTags} onChange={(e) => setNewTags(e.target.value)} className="input-field" placeholder="标签，逗号分隔" />
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">知识标题 *</label>
+                  <input value={newTitle} onChange={(e) => { setNewTitle(e.target.value); setError(''); }} className="input-field w-full" placeholder="请输入知识标题" />
                 </div>
-                <div className="flex gap-3">
-                  <button onClick={() => { setShowAdd(false); resetForm(); }} className="flex-1 btn-secondary">取消</button>
-                  <button onClick={handleAddManual} disabled={submitting} className="flex-1 btn-primary disabled:opacity-50">{submitting ? '添加中...' : '添加'}</button>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">知识内容</label>
+                  <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} className="input-field w-full h-48 resize-none" placeholder="知识内容（支持 Markdown）" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">分类</label>
+                    <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="input-field w-full" placeholder="分类（可选）" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">标签</label>
+                    <input value={newTags} onChange={(e) => setNewTags(e.target.value)} className="input-field w-full" placeholder="标签，逗号分隔" />
+                  </div>
                 </div>
               </div>
             )}
 
             {addMode === 'file' && (
-              <div className="space-y-4">
-                <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
-                    isDragOver
-                      ? 'border-cyan-400 bg-cyan-400/10'
-                      : 'border-white/20 hover:border-white/40 hover:bg-white/5'
-                  }`}
-                >
-                  <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragOver ? 'text-cyan-400' : 'text-gray-500'}`} />
-                  <p className="text-white font-medium mb-1">
-                    {isDragOver ? '释放文件以上传' : '拖拽文件到此处，或点击选择'}
-                  </p>
-                  <p className="text-gray-500 text-sm">支持 PDF、Word、Excel、PPT、TXT、Markdown 等</p>
-                  <p className="text-gray-600 text-xs mt-1">单个文件最大 50MB，支持多文件同时上传</p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.markdown,.html,.htm,.rtf,.csv,.json,.xml,.java,.py,.js,.ts"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">上传文件</label>
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
+                      isDragOver
+                        ? 'border-cyan-400 bg-cyan-400/10'
+                        : 'border-white/20 hover:border-white/40 hover:bg-white/5'
+                    }`}
+                  >
+                    <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragOver ? 'text-cyan-400' : 'text-gray-500'}`} />
+                    <p className="text-white font-medium mb-1">
+                      {isDragOver ? '释放文件以上传' : '拖拽文件到此处，或点击选择'}
+                    </p>
+                    <p className="text-gray-500 text-sm">支持 PDF、Word、Excel、PPT、TXT、Markdown 等</p>
+                    <p className="text-gray-600 text-xs mt-1">单个文件最大 50MB，支持多文件同时上传</p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.markdown,.html,.htm,.rtf,.csv,.json,.xml,.java,.py,.js,.ts"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                  </div>
                 </div>
 
                 {selectedFiles.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-sm text-gray-400">已选择 {selectedFiles.length} 个文件：</p>
+                    <p className="text-sm text-gray-400 font-medium">已选择 {selectedFiles.length} 个文件：</p>
                     {selectedFiles.map((file, idx) => {
                       const supported = isFileSupported(file.name);
                       const oversized = file.size > MAX_FILE_SIZE;
                       return (
-                        <div key={idx} className={`flex items-center gap-3 p-3 rounded-xl ${supported && !oversized ? 'bg-white/5' : 'bg-red-500/10 border border-red-500/20'}`}>
+                        <div key={idx} className={`flex items-center gap-3 p-4 rounded-xl ${supported && !oversized ? 'bg-white/5 hover:bg-white/10 transition-colors' : 'bg-red-500/10 border border-red-500/20'}`}>
                           <div className="flex-shrink-0">{getFileIcon(file.name)}</div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm text-white truncate">{file.name}</p>
+                            <p className="text-sm text-white truncate font-medium">{file.name}</p>
                             <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
-                            {!supported && <p className="text-xs text-red-400">不支持的格式</p>}
-                            {oversized && <p className="text-xs text-red-400">超过50MB限制</p>}
+                            {!supported && <p className="text-xs text-red-400 mt-0.5">不支持的格式</p>}
+                            {oversized && <p className="text-xs text-red-400 mt-0.5">超过50MB限制</p>}
                           </div>
-                          <button onClick={(e) => { e.stopPropagation(); removeFile(idx); }} className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-red-400">
+                          <button onClick={(e) => { e.stopPropagation(); removeFile(idx); }} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-red-400 transition-colors">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -424,22 +481,22 @@ export default function KnowledgeBaseDetail() {
                 )}
 
                 <div className="grid grid-cols-2 gap-3">
-                  <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="input-field" placeholder="分类（可选）" />
-                  <input value={newTags} onChange={(e) => setNewTags(e.target.value)} className="input-field" placeholder="标签，逗号分隔" />
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={() => { setShowAdd(false); resetForm(); }} className="flex-1 btn-secondary">取消</button>
-                  <button onClick={handleFileUpload} disabled={submitting || selectedFiles.length === 0} className="flex-1 btn-primary disabled:opacity-50">
-                    {submitting ? '上传中...' : `上传 ${selectedFiles.length > 0 ? `(${selectedFiles.length}个文件)` : ''}`}
-                  </button>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">分类</label>
+                    <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="input-field w-full" placeholder="分类（可选）" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">标签</label>
+                    <input value={newTags} onChange={(e) => setNewTags(e.target.value)} className="input-field w-full" placeholder="标签，逗号分隔" />
+                  </div>
                 </div>
               </div>
             )}
 
             {addMode === 'url' && (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div>
-                  <label className="text-sm text-gray-400 mb-1 block">网页地址</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">网页地址 *</label>
                   <div className="relative">
                     <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                     <input
@@ -450,18 +507,45 @@ export default function KnowledgeBaseDetail() {
                     />
                   </div>
                 </div>
-                <input value={urlTitle} onChange={(e) => setUrlTitle(e.target.value)} className="input-field w-full" placeholder="标题（可选，留空自动获取）" />
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">网页标题</label>
+                  <input value={urlTitle} onChange={(e) => setUrlTitle(e.target.value)} className="input-field w-full" placeholder="标题（可选，留空自动获取）" />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="input-field" placeholder="分类（可选）" />
-                  <input value={newTags} onChange={(e) => setNewTags(e.target.value)} className="input-field" placeholder="标签，逗号分隔" />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">分类</label>
+                    <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="input-field w-full" placeholder="分类（可选）" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">标签</label>
+                    <input value={newTags} onChange={(e) => setNewTags(e.target.value)} className="input-field w-full" placeholder="标签，逗号分隔" />
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500">系统将自动爬取网页正文内容，提取纯文本后进行分片和向量化处理</p>
-                <div className="flex gap-3">
-                  <button onClick={() => { setShowAdd(false); resetForm(); }} className="flex-1 btn-secondary">取消</button>
-                  <button onClick={handleUrlImport} disabled={submitting} className="flex-1 btn-primary disabled:opacity-50">{submitting ? '导入中...' : '导入'}</button>
-                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">系统将自动爬取网页正文内容，提取纯文本后进行分片和向量化处理</p>
               </div>
             )}
+            </div>
+            
+            <div className="p-6 border-t border-white/5 flex justify-end gap-3 flex-shrink-0">
+              <button onClick={() => { setShowAdd(false); resetForm(); }} className="btn-secondary">
+                取消
+              </button>
+              {addMode === 'manual' && (
+                <button onClick={handleAddManual} disabled={submitting} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+                  {submitting ? '添加中...' : '添加'}
+                </button>
+              )}
+              {addMode === 'file' && (
+                <button onClick={handleFileUpload} disabled={submitting || selectedFiles.length === 0} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+                  {submitting ? '上传中...' : `上传 ${selectedFiles.length > 0 ? `(${selectedFiles.length}个文件)` : ''}`}
+                </button>
+              )}
+              {addMode === 'url' && (
+                <button onClick={handleUrlImport} disabled={submitting} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+                  {submitting ? '导入中...' : '导入'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 package com.example.agentplatform.tools.service.impl;
 
 import com.example.agentplatform.common.exception.BusinessException;
+import com.example.agentplatform.tools.common.FileUtils;
 import com.example.agentplatform.tools.dto.FileConvertRequestDTO;
 import com.example.agentplatform.tools.dto.FileConvertResultDTO;
 import com.example.agentplatform.tools.dto.FileFormatInfoDTO;
@@ -113,18 +114,17 @@ public class FileConvertServiceImpl implements FileConvertService {
         validateTargetFormat(targetFormat);
 
         // 检测源文件格式
-        String sourceFormat = detectSourceFormat(file.getOriginalFilename());
+        String sourceFormat = FileUtils.detectFileExtension(file.getOriginalFilename());
         String originalFileName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "unknown";
 
         // 执行文件转换
         byte[] convertedBytes = convertFile(file, sourceFormat, targetFormat);
 
         // 构建转换后的文件名
-        String convertedFileName = buildConvertedFileName(originalFileName, targetFormat);
+        String convertedFileName = FileUtils.buildConvertedFileName(originalFileName, targetFormat);
 
         // 构建Base64编码数据
-        String base64Data = "data:" + FORMAT_MIME_MAP.get(targetFormat) + ";base64," +
-                Base64.getEncoder().encodeToString(convertedBytes);
+        String base64Data = FileUtils.toBase64Data(convertedBytes, FORMAT_MIME_MAP.get(targetFormat));
 
         // 记录转换日志
         log.info("文件格式转换完成: {} -> {}, 原始大小: {} bytes, 转换后大小: {} bytes",
@@ -188,23 +188,6 @@ public class FileConvertServiceImpl implements FileConvertService {
         if (!WRITABLE_FORMATS.contains(targetFormat)) {
             throw new BusinessException("不支持的目标格式: " + targetFormat);
         }
-    }
-
-    /**
-     * 检测源文件格式
-     *
-     * @param fileName 文件名
-     * @return 文件格式（小写）
-     */
-    private String detectSourceFormat(String fileName) {
-        if (fileName == null || fileName.isEmpty()) {
-            return "unknown";
-        }
-        int dotIndex = fileName.lastIndexOf('.');
-        if (dotIndex < 0) {
-            return "unknown";
-        }
-        return fileName.substring(dotIndex + 1).toLowerCase();
     }
 
     /**
@@ -576,16 +559,4 @@ public class FileConvertServiceImpl implements FileConvertService {
         }
     }
 
-    /**
-     * 构建转换后的文件名
-     *
-     * @param originalFileName 原始文件名
-     * @param targetFormat     目标格式
-     * @return 转换后的文件名
-     */
-    private String buildConvertedFileName(String originalFileName, String targetFormat) {
-        int dotIndex = originalFileName.lastIndexOf('.');
-        String baseName = dotIndex > 0 ? originalFileName.substring(0, dotIndex) : originalFileName;
-        return baseName + "." + targetFormat;
-    }
 }

@@ -1,5 +1,7 @@
 package com.example.agentplatform.tools.service.impl;
 
+import com.example.agentplatform.common.exception.BusinessException;
+import com.example.agentplatform.tools.common.FileUtils;
 import com.example.agentplatform.tools.dto.PhotoSizeDTO;
 import com.example.agentplatform.tools.dto.PhotoStandardizationRequestDTO;
 import com.example.agentplatform.tools.dto.PhotoStandardizationResultDTO;
@@ -14,7 +16,6 @@ import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -111,45 +112,45 @@ public class PhotoStandardizationServiceImpl implements PhotoStandardizationServ
         try {
             BufferedImage originalImage = ImageIO.read(file.getInputStream());
             if (originalImage == null) {
-                throw new RuntimeException("无法读取图片文件");
+                throw new BusinessException("无法读取图片文件");
             }
-            
+
             int[] targetSize = PHOTO_SIZES.get(request.getPhotoSize());
             if (targetSize == null) {
-                throw new RuntimeException("不支持的照片尺寸: " + request.getPhotoSize());
+                throw new BusinessException("不支持的照片尺寸: " + request.getPhotoSize());
             }
-            
+
             Color bgColor = BACKGROUND_COLORS.get(request.getBackgroundColor());
             if (bgColor == null) {
-                throw new RuntimeException("不支持的背景颜色: " + request.getBackgroundColor());
+                throw new BusinessException("不支持的背景颜色: " + request.getBackgroundColor());
             }
-            
+
             int targetWidth = targetSize[0];
             int targetHeight = targetSize[1];
-            
+
             BufferedImage processedImage = processImage(originalImage, targetWidth, targetHeight, bgColor);
-            
+
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             String format = Boolean.TRUE.equals(request.getJpegOutput()) ? "jpg" : "png";
             String mimeType = Boolean.TRUE.equals(request.getJpegOutput()) ? "image/jpeg" : "image/png";
-            
+
             int quality = request.getQuality() != null ? request.getQuality() : 90;
-            
+
             if (Boolean.TRUE.equals(request.getJpegOutput())) {
                 writeJpegImage(processedImage, outputStream, quality);
             } else {
                 ImageIO.write(processedImage, "PNG", outputStream);
             }
-            
+
             byte[] imageBytes = outputStream.toByteArray();
-            String base64Image = "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(imageBytes);
-            
+            String base64Image = FileUtils.toBase64Data(imageBytes, mimeType);
+
             String originalFilename = file.getOriginalFilename();
             String extension = Boolean.TRUE.equals(request.getJpegOutput()) ? ".jpg" : ".png";
-            String convertedFilename = originalFilename != null 
+            String convertedFilename = originalFilename != null
                     ? originalFilename.substring(0, originalFilename.lastIndexOf('.')) + "_证件照" + extension
                     : "photo_standardized" + extension;
-            
+
             return PhotoStandardizationResultDTO.builder()
                     .originalFileName(originalFilename)
                     .convertedFileName(convertedFilename)
@@ -163,10 +164,10 @@ public class PhotoStandardizationServiceImpl implements PhotoStandardizationServ
                     .mimeType(mimeType)
                     .imageDataBase64(base64Image)
                     .build();
-                    
+
         } catch (IOException e) {
             log.error("证件照处理失败", e);
-            throw new RuntimeException("证件照处理失败: " + e.getMessage());
+            throw new BusinessException("证件照处理失败: " + e.getMessage());
         }
     }
     

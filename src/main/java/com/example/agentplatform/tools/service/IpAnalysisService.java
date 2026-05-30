@@ -1,11 +1,10 @@
 package com.example.agentplatform.tools.service;
 
+import com.example.agentplatform.tools.common.CommandExecutor;
 import com.example.agentplatform.tools.dto.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -13,8 +12,24 @@ import java.net.UnknownHostException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
+/**
+ * IP分析服务
+ * <p>提供网络诊断相关的工具功能，包括IP信息查询、Ping测试、路由跟踪等
+ * <p>主要功能包括：
+ * <ul>
+ *   <li>当前IP信息 - 获取公网IP、主机名、网络接口、网关、DNS等信息</li>
+ *   <li>Ping测试 - 测试网络连通性和延迟</li>
+ *   <li>路由跟踪 - 追踪数据包到达目标的路径</li>
+ *   <li>DNS解析 - 域名解析和反向解析</li>
+ *   <li>局域网扫描 - 发现局域网内的设备</li>
+ * </ul>
+ * 
+ * @author System
+ * @since 2025-01-01
+ * @see com.example.agentplatform.tools.controller.IpAnalysisController
+ * @see CurrentIpInfoDTO
+ */
 @Slf4j
 @Service
 public class IpAnalysisService {
@@ -106,21 +121,13 @@ public class IpAnalysisService {
     public PingResultDTO pingNative(String target, Integer count) {
         int packetCount = count != null ? Math.min(Math.max(count, 1), 10) : 4;
         try {
-            ProcessBuilder pb = new ProcessBuilder("ping", "-n", String.valueOf(packetCount), "-w", "5000", target);
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
+            String output = CommandExecutor.executeCommandForOutput(
+                    "ping -n " + packetCount + " -w 5000 " + target,
+                    "GBK",
+                    30
+            );
 
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), "GBK"))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-
-            boolean finished = process.waitFor(30, java.util.concurrent.TimeUnit.SECONDS);
-            if (!finished) {
-                process.destroyForcibly();
+            if (output.isEmpty()) {
                 return PingResultDTO.builder()
                         .target(target)
                         .reachable(false)
@@ -131,7 +138,7 @@ public class IpAnalysisService {
                         .build();
             }
 
-            return parsePingOutput(target, output.toString(), packetCount);
+            return parsePingOutput(target, output, packetCount);
 
         } catch (Exception e) {
             log.error("Native ping执行失败: {}", target, e);
@@ -221,25 +228,17 @@ public class IpAnalysisService {
         List<TracerouteHopDTO> hops = new ArrayList<>();
 
         try {
-            ProcessBuilder pb = new ProcessBuilder("tracert", "-d", "-h",
-                    String.valueOf(TRACERT_MAX_HOPS), "-w",
-                    String.valueOf(TRACERT_TIMEOUT_S * 1000), target);
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
+            List<String> lines = CommandExecutor.executeCommand(
+                    "tracert -d -h " + TRACERT_MAX_HOPS + " -w " + (TRACERT_TIMEOUT_S * 1000) + " " + target,
+                    "GBK",
+                    120
+            );
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), "GBK"))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    TracerouteHopDTO hop = parseTracertLine(line);
-                    if (hop != null) {
-                        hops.add(hop);
-                    }
+            for (String line : lines) {
+                TracerouteHopDTO hop = parseTracertLine(line);
+                if (hop != null) {
+                    hops.add(hop);
                 }
-            }
-
-            boolean finished = process.waitFor(120, java.util.concurrent.TimeUnit.SECONDS);
-            if (!finished) {
-                process.destroyForcibly();
             }
 
         } catch (Exception e) {
@@ -436,23 +435,16 @@ public class IpAnalysisService {
     public DnsResultDTO resolveDnsNative(String domain) {
         long startTime = System.currentTimeMillis();
         try {
-            ProcessBuilder pb = new ProcessBuilder("nslookup", domain);
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
+            String output = CommandExecutor.executeCommandForOutput(
+                    "nslookup " + domain,
+                    "GBK",
+                    15
+            );
 
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), "GBK"))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-
-            process.waitFor(15, java.util.concurrent.TimeUnit.SECONDS);
             long queryTime = System.currentTimeMillis() - startTime;
 
             Pattern ipPattern = Pattern.compile("Address:\\s*(\\d+\\.\\d+\\.\\d+\\.\\d+)");
-            Matcher m = ipPattern.matcher(output.toString());
+            Matcher m = ipPattern.matcher(output);
 
             String resolvedIp = null;
             while (m.find()) {
@@ -460,7 +452,7 @@ public class IpAnalysisService {
             }
 
             Pattern serverPattern = Pattern.compile("Server:\\s*(\\d+\\.\\d+\\.\\d+\\.\\d+)");
-            Matcher sm = serverPattern.matcher(output.toString());
+            Matcher sm = serverPattern.matcher(output);
             String dnsServer = sm.find() ? sm.group(1) : null;
 
             if (resolvedIp != null) {
@@ -494,41 +486,34 @@ public class IpAnalysisService {
         String interfaceName = "";
 
         try {
-            ProcessBuilder pb = new ProcessBuilder("arp", "-a");
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
+            List<String> lines = CommandExecutor.executeCommand("arp -a", "GBK", 10);
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), "GBK"))) {
-                String line;
-                boolean inTable = false;
-                while ((line = reader.readLine()) != null) {
-                    if (line.contains("---") || line.contains("接口")) {
-                        Pattern ifacePattern = Pattern.compile("接口:\\s*(\\S+)\\s*-+\\s*(0x\\S+)?");
-                        Matcher ifaceMatcher = ifacePattern.matcher(line);
-                        if (ifaceMatcher.find()) {
-                            interfaceName = ifaceMatcher.group(1);
-                        }
-
-                        Pattern subnetPattern = Pattern.compile("(\\d+\\.\\d+\\.\\d+\\.\\d+)");
-                        Matcher subnetMatcher = subnetPattern.matcher(line);
-                        if (subnetMatcher.find()) {
-                            String[] parts = subnetMatcher.group(1).split("\\.");
-                            subnet = parts[0] + "." + parts[1] + "." + parts[2] + ".0/24";
-                        }
-                        inTable = true;
-                        continue;
+            boolean inTable = false;
+            for (String line : lines) {
+                if (line.contains("---") || line.contains("接口")) {
+                    Pattern ifacePattern = Pattern.compile("接口:\\s*(\\S+)\\s*-+\\s*(0x\\S+)?");
+                    Matcher ifaceMatcher = ifacePattern.matcher(line);
+                    if (ifaceMatcher.find()) {
+                        interfaceName = ifaceMatcher.group(1);
                     }
 
-                    if (inTable) {
-                        ArpEntryDTO entry = parseArpLine(line);
-                        if (entry != null) {
-                            entries.add(entry);
-                        }
+                    Pattern subnetPattern = Pattern.compile("(\\d+\\.\\d+\\.\\d+\\.\\d+)");
+                    Matcher subnetMatcher = subnetPattern.matcher(line);
+                    if (subnetMatcher.find()) {
+                        String[] parts = subnetMatcher.group(1).split("\\.");
+                        subnet = parts[0] + "." + parts[1] + "." + parts[2] + ".0/24";
+                    }
+                    inTable = true;
+                    continue;
+                }
+
+                if (inTable) {
+                    ArpEntryDTO entry = parseArpLine(line);
+                    if (entry != null) {
+                        entries.add(entry);
                     }
                 }
             }
-
-            process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
 
         } catch (Exception e) {
             log.error("ARP扫描失败", e);
@@ -709,17 +694,17 @@ public class IpAnalysisService {
 
         for (String api : apis) {
             try {
-                ProcessBuilder pb = new ProcessBuilder("curl", "-s", "--connect-timeout", "5", api);
-                pb.redirectErrorStream(true);
-                Process process = pb.start();
-                String result;
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                    result = reader.readLine();
-                }
-                process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+                String result = CommandExecutor.executeCommandForOutput(
+                        "curl -s --connect-timeout 5 " + api,
+                        "UTF-8",
+                        10
+                );
 
-                if (result != null && IPV4_PATTERN.matcher(result.trim()).matches()) {
-                    return result.trim();
+                if (result != null) {
+                    String ip = result.trim();
+                    if (IPV4_PATTERN.matcher(ip).matches()) {
+                        return ip;
+                    }
                 }
             } catch (Exception e) {
                 log.debug("从 {} 获取公网IP失败", api, e);
@@ -808,24 +793,14 @@ public class IpAnalysisService {
 
     private String detectDefaultGateway() {
         try {
-            ProcessBuilder pb = new ProcessBuilder("ipconfig");
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), "GBK"))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-            process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+            String output = CommandExecutor.executeCommandForOutput("ipconfig", "GBK", 10);
 
             Pattern p = Pattern.compile("默认网关[^:]*:\\s*(\\d+\\.\\d+\\.\\d+\\.\\d+)");
-            Matcher m = p.matcher(output.toString());
+            Matcher m = p.matcher(output);
             if (m.find()) return m.group(1);
 
             Pattern p2 = Pattern.compile("Default Gateway[^:]*:\\s*(\\d+\\.\\d+\\.\\d+\\.\\d+)");
-            Matcher m2 = p2.matcher(output.toString());
+            Matcher m2 = p2.matcher(output);
             if (m2.find()) return m2.group(1);
 
         } catch (Exception e) {
@@ -836,24 +811,14 @@ public class IpAnalysisService {
 
     private String detectDnsServer() {
         try {
-            ProcessBuilder pb = new ProcessBuilder("ipconfig", "/all");
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), "GBK"))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-            process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+            String output = CommandExecutor.executeCommandForOutput("ipconfig /all", "GBK", 10);
 
             Pattern p = Pattern.compile("DNS服务器[^:]*:\\s*(\\d+\\.\\d+\\.\\d+\\.\\d+)");
-            Matcher m = p.matcher(output.toString());
+            Matcher m = p.matcher(output);
             if (m.find()) return m.group(1);
 
             Pattern p2 = Pattern.compile("DNS Servers[^:]*:\\s*(\\d+\\.\\d+\\.\\d+\\.\\d+)");
-            Matcher m2 = p2.matcher(output.toString());
+            Matcher m2 = p2.matcher(output);
             if (m2.find()) return m2.group(1);
 
         } catch (Exception e) {

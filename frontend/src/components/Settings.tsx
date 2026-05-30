@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { User, Mail, Shield, Bell, Globe, Save, CheckCircle, Key, Database } from 'lucide-react';
+import { User, Mail, Shield, Bell, Globe, Save, CheckCircle, Key, Database, Settings as SettingsIcon } from 'lucide-react';
 import { authApi } from '@/api';
 import { useAuthStore } from '@/store/authStore';
 import type { SettingsSection } from '@/types';
@@ -86,15 +86,23 @@ export default function Settings() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-white">设置</h1>
-          <p className="text-gray-400 mt-1">管理您的账户和应用设置</p>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-card-strong mb-3">
+            <SettingsIcon className="w-4 h-4 text-violet-400" />
+            <span className="text-sm text-violet-400 font-medium">个性化设置</span>
+          </div>
+          <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">
+            系统<span className="gradient-text-aurora">设置</span>
+          </h1>
+          <p className="text-gray-400 text-lg">
+            管理您的账户和应用设置
+          </p>
         </div>
         <button
           onClick={handleSave}
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center gap-2 self-start md:self-auto text-base px-6 py-3.5 group"
         >
           {saved ? (
             <>
@@ -103,7 +111,7 @@ export default function Settings() {
             </>
           ) : (
             <>
-              <Save className="w-5 h-5" />
+              <Save className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
               保存设置
             </>
           )}
@@ -111,112 +119,126 @@ export default function Settings() {
       </div>
 
       <div className="space-y-6">
-        {settingsSections.map((section) => {
+        {settingsSections.map((section, index) => {
           const Icon = section.icon;
           return (
-            <div key={section.title} className="glass-card rounded-3xl p-6 glass-card-hover">
-              <div className="flex items-center gap-4 mb-6">
-                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${section.gradient} flex items-center justify-center shadow-lg`}>
-                  <Icon className="w-6 h-6 text-white" />
+            <div
+              key={section.title}
+              className="group relative overflow-hidden rounded-3xl glass-card glass-card-hover p-6 animate-fadeIn opacity-0"
+              style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'forwards' }}
+            >
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+              <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-violet-500/10 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              <div className="relative">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${section.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">{section.title}</h2>
+                    <p className="text-gray-400 text-sm">
+                      {section.title === '个人资料' && '您的基本信息'}
+                      {section.title === 'AI 配置' && '连接您的 AI 服务'}
+                      {section.title === '通知设置' && '管理通知偏好'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">{section.title}</h2>
-                  <p className="text-gray-400 text-sm">
-                    {section.title === '个人资料' && '您的基本信息'}
-                    {section.title === 'AI 配置' && '连接您的 AI 服务'}
-                    {section.title === '通知设置' && '管理通知偏好'}
-                  </p>
-                </div>
+
+                {section.displayFields && (
+                  <div className="space-y-4">
+                    {section.displayFields.map((field) => {
+                      const Icon = field.icon;
+                      return (
+                        <div key={field.label}>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            {field.label}
+                          </label>
+                          <div className="relative">
+                            <Icon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                              type="text"
+                              value={field.value}
+                              disabled
+                              className="input-field w-full pl-12 opacity-70"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {section.inputFields && (
+                  <div className="space-y-4">
+                    {section.inputFields.map((field) => {
+                      const Icon = field.icon;
+                      return (
+                        <div key={field.label}>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            {field.label}
+                          </label>
+                          <div className="relative">
+                            <Icon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                            <input
+                              type={field.type || 'text'}
+                              value={field.value}
+                              onChange={(e) => field.onChange(e.target.value)}
+                              placeholder={field.placeholder}
+                              className="input-field w-full pl-12"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {section.toggles && (
+                  <div className="space-y-4">
+                    {section.toggles.map((toggle) => (
+                      <div key={toggle.label} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
+                        <span className="text-gray-300">{toggle.label}</span>
+                        <button
+                          onClick={() => toggle.onChange(!toggle.value)}
+                          className={`relative w-14 h-7 rounded-full transition-all ${
+                            toggle.value 
+                              ? 'bg-gradient-to-r from-indigo-500 to-cyan-400' 
+                              : 'bg-white/10'
+                          }`}
+                        >
+                          <span className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-lg transition-transform ${
+                            toggle.value ? 'translate-x-7' : ''
+                          }`} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-
-              {section.displayFields && (
-                <div className="space-y-4">
-                  {section.displayFields.map((field) => {
-                    const Icon = field.icon;
-                    return (
-                      <div key={field.label}>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          {field.label}
-                        </label>
-                        <div className="relative">
-                          <Icon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
-                          <input
-                            type="text"
-                            value={field.value}
-                            disabled
-                            className="input-field w-full pl-12 opacity-70"
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {section.inputFields && (
-                <div className="space-y-4">
-                  {section.inputFields.map((field) => {
-                    const Icon = field.icon;
-                    return (
-                      <div key={field.label}>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          {field.label}
-                        </label>
-                        <div className="relative">
-                          <Icon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
-                          <input
-                            type={field.type || 'text'}
-                            value={field.value}
-                            onChange={(e) => field.onChange(e.target.value)}
-                            placeholder={field.placeholder}
-                            className="input-field w-full pl-12"
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {section.toggles && (
-                <div className="space-y-4">
-                  {section.toggles.map((toggle) => (
-                    <div key={toggle.label} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
-                      <span className="text-gray-300">{toggle.label}</span>
-                      <button
-                        onClick={() => toggle.onChange(!toggle.value)}
-                        className={`relative w-14 h-7 rounded-full transition-all ${
-                          toggle.value 
-                            ? 'bg-gradient-to-r from-indigo-500 to-cyan-400' 
-                            : 'bg-white/10'
-                        }`}
-                      >
-                        <span className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-lg transition-transform ${
-                          toggle.value ? 'translate-x-7' : ''
-                        }`} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           );
         })}
 
-        <div className="glass-card rounded-3xl p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center shadow-lg">
-              <Shield className="w-6 h-6 text-white" />
+        <div className="group relative overflow-hidden rounded-3xl glass-card p-6 animate-fadeIn opacity-0" style={{ animationDelay: '225ms', animationFillMode: 'forwards' }}>
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-amber-500/15 to-transparent rounded-full blur-3xl" />
+          
+          <div className="relative">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-transform duration-300">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">安全提示</h2>
+                <p className="text-gray-400 text-sm">保护您的账户安全</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">安全提示</h2>
-              <p className="text-gray-400 text-sm">保护您的账户安全</p>
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5">
+              <p className="text-amber-300 text-sm leading-relaxed">
+                API Key 仅存储在本地浏览器中，不会上传到服务器。请妥善保管您的密钥，不要分享给他人。
+              </p>
             </div>
-          </div>
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
-            <p className="text-amber-300 text-sm">
-              API Key 仅存储在本地浏览器中，不会上传到服务器。请妥善保管您的密钥，不要分享给他人。
-            </p>
           </div>
         </div>
       </div>

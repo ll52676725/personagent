@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera, Shapes } from 'lucide-react';
+import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera, Shapes, ShieldAlert, Wrench } from 'lucide-react';
 
 interface ToolInfo {
   id: string;
@@ -83,6 +83,15 @@ const tools: ToolInfo[] = [
     path: '/tools/ip-analyzer',
     badge: '新',
   },
+  {
+    id: 'virus-detector',
+    title: '病毒检测与安全分析',
+    description: '检测系统可疑程序、高危漏洞，AI智能分析安全风险，提供修复方案和安全加固建议',
+    icon: ShieldAlert,
+    gradient: 'from-red-500 to-rose-600',
+    path: '/tools/virus-detector',
+    badge: '新',
+  },
 ];
 
 export default function ToolPanel() {
@@ -90,46 +99,60 @@ export default function ToolPanel() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            工具集
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-card-strong mb-3">
+            <Wrench className="w-4 h-4 text-cyan-400" />
+            <span className="text-sm text-cyan-400 font-medium">多功能工具箱</span>
+          </div>
+          <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">
+            工具<span className="gradient-text-aurora">集</span>
           </h1>
-          <p className="text-gray-400">
+          <p className="text-gray-400 text-lg">
             实用工具箱，助您高效创作
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tools.map((tool, index) => {
-          const Icon = tool.icon;
-          return (
-            <div
-              key={tool.id}
-              className="glass-card rounded-3xl p-6 glass-card-hover cursor-pointer group animate-fadeIn opacity-0"
-              style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
-              onClick={() => navigate(tool.path)}
-            >
-              <div className="relative mb-4">
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${tool.gradient} flex items-center justify-center shadow-lg`}>
-                  <Icon className="w-7 h-7 text-white" />
+      <div className="relative">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-violet-500/10 to-transparent rounded-full blur-2xl" />
+        <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {tools.map((tool, index) => {
+            const Icon = tool.icon;
+            return (
+              <div
+                key={tool.id}
+                className="group relative overflow-hidden glass-card rounded-3xl p-6 glass-card-hover cursor-pointer animate-fadeIn opacity-0"
+                style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'forwards' }}
+                onClick={() => navigate(tool.path)}
+              >
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+                <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-cyan-500/5 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                
+                <div className="relative">
+                  <div className="relative mb-4">
+                    <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${tool.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                      <Icon className="w-7 h-7 text-white" />
+                    </div>
+                    {tool.badge && (
+                      <span className="absolute top-0 right-0 px-2 py-0.5 text-xs bg-gradient-to-r from-pink-500 to-orange-400 text-white rounded-full font-medium">
+                        {tool.badge}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <h3 className="text-xl font-bold text-white mb-2">{tool.title}</h3>
+                  <p className="text-gray-400 text-sm mb-4 line-clamp-2">{tool.description}</p>
+                  <div className="flex items-center text-cyan-400 group-hover:text-white transition-colors">
+                    <span className="text-sm font-medium">立即使用</span>
+                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
-                {tool.badge && (
-                  <span className="absolute top-0 right-0 px-2 py-0.5 text-xs bg-gradient-to-r from-pink-500 to-orange-400 text-white rounded-full font-medium">
-                    {tool.badge}
-                  </span>
-                )}
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">{tool.title}</h3>
-              <p className="text-gray-400 text-sm mb-4 line-clamp-2">{tool.description}</p>
-              <div className="flex items-center text-cyan-400 group-hover:text-white transition-colors">
-                <span className="text-sm font-medium">立即使用</span>
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

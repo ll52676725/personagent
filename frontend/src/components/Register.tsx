@@ -53,45 +53,57 @@ export default function Register() {
       
       <div className="relative z-10 w-full max-w-md mx-4">
         <div className="text-center mb-8 animate-fadeIn">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mx-auto mb-6 glow-effect">
-            <Zap className="w-10 h-10 text-white" />
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500 to-purple-600 rounded-3xl animate-pulse" />
+            <div className="absolute inset-0.5 bg-[#0a0f1a] rounded-[1.35rem] flex items-center justify-center">
+              <Zap className="w-10 h-10 text-white" />
+            </div>
           </div>
           <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">
-            Agent<span className="gradient-text">AI</span>
+            Agent<span className="gradient-text-aurora">AI</span>
           </h1>
           <p className="text-gray-400 text-lg">智能创作平台 · 赋能内容生产</p>
         </div>
 
-        <div className="glass-card rounded-3xl p-8 animate-fadeIn delay-100">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-white">创建账户</h2>
-            <p className="text-gray-400 mt-2">开始您的 AI 创作之旅</p>
-          </div>
+        <div className="relative overflow-hidden glass-card rounded-3xl p-8 animate-fadeIn delay-100">
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-violet-500/20 to-transparent rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-gradient-to-tr from-indigo-500/15 to-transparent rounded-full blur-2xl" />
+          
+          <div className="relative">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-white">创建<span className="gradient-text-aurora">账户</span></h2>
+              <p className="text-gray-400 mt-2">开始您的 AI 创作之旅</p>
+            </div>
 
           {success ? (
-            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-8 text-center animate-fadeIn">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-10 h-10 text-emerald-400" />
+            <div className="relative overflow-hidden bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-8 text-center animate-fadeIn">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/20 to-transparent rounded-full blur-2xl" />
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-10 h-10 text-emerald-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-emerald-300 mb-2">注册成功</h3>
+                <p className="text-emerald-400/80">正在跳转到登录页面...</p>
               </div>
-              <h3 className="text-xl font-semibold text-emerald-300 mb-2">注册成功</h3>
-              <p className="text-emerald-400/80">正在跳转到登录页面...</p>
             </div>
           ) : (
             <>
               {error && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-6 flex items-start gap-3 animate-fadeIn">
-                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-red-300">{error}</span>
+                <div className="relative overflow-hidden bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-6 flex items-start gap-3 animate-fadeIn">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-red-500/15 to-transparent rounded-full blur-xl" />
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5 relative" />
+                  <span className="text-red-300 relative">{error}</span>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     用户名
                   </label>
                   <div className="relative">
-                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
                       value={formData.username}
@@ -108,7 +120,7 @@ export default function Register() {
                     邮箱
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="email"
                       value={formData.email}
@@ -125,7 +137,7 @@ export default function Register() {
                     密码
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="password"
                       value={formData.password}
@@ -142,7 +154,7 @@ export default function Register() {
                     确认密码
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="password"
                       value={formData.confirmPassword}
@@ -180,11 +192,12 @@ export default function Register() {
               已有账户？{' '}
               <Link 
                 to="/login" 
-                className="gradient-text font-semibold hover:underline"
+                className="gradient-text-aurora font-semibold hover:underline"
               >
                 立即登录 →
               </Link>
             </p>
+          </div>
           </div>
         </div>
 
