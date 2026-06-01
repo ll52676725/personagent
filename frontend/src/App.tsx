@@ -23,6 +23,9 @@ import RegistryCleaner from '@/components/RegistryCleaner';
 import IpAnalyzer from '@/components/IpAnalyzer';
 import AppIconGenerator from '@/components/AppIconGenerator';
 import VirusDetector from '@/components/VirusDetector';
+import CronGenerator from '@/components/CronGenerator';
+import RegexTester from '@/components/RegexTester';
+import SqlFormatter from '@/components/SqlFormatter';
 import RuleTemplateManager from '@/components/RuleTemplateManager';
 import RuleConfigManager from '@/components/RuleConfigManager';
 import ConflictResolver from '@/components/ConflictResolver';
@@ -71,6 +74,9 @@ export default function App() {
       <Route path="/tools/ip-analyzer" element={<ProtectedRoute><Layout><IpAnalyzer /></Layout></ProtectedRoute>} />
       <Route path="/tools/app-icon-generator" element={<ProtectedRoute><Layout><AppIconGenerator /></Layout></ProtectedRoute>} />
       <Route path="/tools/virus-detector" element={<ProtectedRoute><Layout><VirusDetector /></Layout></ProtectedRoute>} />
+      <Route path="/tools/cron-generator" element={<ProtectedRoute><Layout><CronGenerator /></Layout></ProtectedRoute>} />
+      <Route path="/tools/regex-tester" element={<ProtectedRoute><Layout><RegexTester /></Layout></ProtectedRoute>} />
+      <Route path="/tools/sql-formatter" element={<ProtectedRoute><Layout><SqlFormatter /></Layout></ProtectedRoute>} />
       <Route path="/rules/templates" element={<ProtectedRoute><Layout><RuleTemplateManager /></Layout></ProtectedRoute>} />
       <Route path="/rules/configs" element={<ProtectedRoute><Layout><RuleConfigManager /></Layout></ProtectedRoute>} />
       <Route path="/rules/conflicts" element={<ProtectedRoute><Layout><ConflictResolver /></Layout></ProtectedRoute>} />

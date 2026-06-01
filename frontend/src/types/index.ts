@@ -972,3 +972,167 @@ export interface AIRuleGenerateRequest {
   fileName?: string;
   saveAsTemplate?: boolean;
 }
+
+export interface CronGenerateRequest {
+  second?: string;
+  minute?: string;
+  hour?: string;
+  day?: string;
+  month?: string;
+  weekDay?: string;
+  year?: string;
+}
+
+export interface CronGenerateResult {
+  success: boolean;
+  cronExpression: string;
+  description: string;
+  presetName: string | null;
+  valid: boolean;
+  warnings: string[] | null;
+}
+
+export interface CronParseRequest {
+  cronExpression: string;
+}
+
+export interface CronParseResult {
+  success: boolean;
+  valid: boolean;
+  description: string;
+  fields: Record<string, string>;
+  errors: string[];
+}
+
+export interface CronNextTimesRequest {
+  cronExpression: string;
+  count?: number;
+  excludeHoliday?: boolean;
+  useChinaHoliday?: boolean;
+}
+
+export interface CronNextTimesResult {
+  success: boolean;
+  cronExpression: string;
+  nextTimes: string[];
+  errors: string[];
+  excludedTimes: string[] | null;
+  holidayInfo: string[] | null;
+}
+
+export interface CronNLRequest {
+  naturalLanguage: string;
+}
+
+export interface CronNLResult {
+  success: boolean;
+  cronExpression: string;
+  description: string;
+  confidence: number;
+  aiModel: string | null;
+  fallback: boolean;
+  errors: string[];
+}
+
+export interface RegexMatchResult {
+  matchedText: string;
+  startIndex: number;
+  endIndex: number;
+  groups: string[];
+}
+
+export interface RegexValidateRequest {
+  pattern: string;
+  testString?: string;
+  flags?: number;
+}
+
+export interface RegexValidateResult {
+  success: boolean;
+  valid: boolean;
+  pattern: string;
+  description: string;
+  matches: RegexMatchResult[];
+  matchCount: number;
+  errors: string[];
+  groups: string[];
+}
+
+export interface RegexGenerateRequest {
+  description: string;
+  testString?: string;
+  category?: string;
+}
+
+export interface RegexAlternative {
+  pattern: string;
+  description: string;
+}
+
+export interface RegexGenerateResult {
+  success: boolean;
+  pattern: string;
+  description: string;
+  explanation: string;
+  testCases: string[];
+  confidence: number;
+  aiModel: string | null;
+  fallback: boolean;
+  errors: string[];
+  alternatives: RegexAlternative[];
+}
+
+export interface RegexFixRequest {
+  pattern: string;
+  testString?: string;
+  errorMessage?: string;
+  intent?: string;
+}
+
+export interface RegexFixResult {
+  success: boolean;
+  originalPattern: string;
+  fixedPattern: string;
+  fixDescription: string;
+  explanation: string;
+  valid: boolean;
+  testMatches: RegexMatchResult[];
+  aiModel: string | null;
+  fallback: boolean;
+  errors: string[];
+  suggestions: string[];
+}
+
+export interface SqlErrorDetail {
+  errorType: string;
+  lineNumber: number;
+  columnNumber: number;
+  errorContext: string;
+  message: string;
+  suggestion: string;
+}
+
+export interface SqlFormatResult {
+  success: boolean;
+  formattedSql: string;
+  compactSql: string;
+  errors: SqlErrorDetail[];
+  aiFixedSql: string;
+  aiFixDescription: string;
+  aiFixSuccess: boolean;
+  indentSize: number;
+  uppercase: boolean;
+  dbType: string;
+  sqlType: string;
+  statistics: string;
+  suggestions: string[];
+}
+
+export interface SqlFormatRequest {
+  content: string;
+  indentSize?: number;
+  uppercase?: boolean;
+  dbType?: string;
+  userIntent?: string;
+  enableAI?: boolean;
+}

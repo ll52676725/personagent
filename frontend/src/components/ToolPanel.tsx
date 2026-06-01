@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera, Shapes, ShieldAlert, Wrench } from 'lucide-react';
+import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera, Shapes, ShieldAlert, Wrench, Clock, Search, Table2 } from 'lucide-react';
 
 interface ToolInfo {
   id: string;
@@ -90,6 +90,33 @@ const tools: ToolInfo[] = [
     icon: ShieldAlert,
     gradient: 'from-red-500 to-rose-600',
     path: '/tools/virus-detector',
+    badge: '新',
+  },
+  {
+    id: 'cron-generator',
+    title: 'Cron 表达式生成器',
+    description: '可视化生成、解析 Cron 表达式，支持预设模板和 AI 自然语言转换，计算下次执行时间',
+    icon: Clock,
+    gradient: 'from-sky-500 to-cyan-600',
+    path: '/tools/cron-generator',
+    badge: '新',
+  },
+  {
+    id: 'regex-tester',
+    title: '正则表达式校验工具',
+    description: '正则表达式校验、匹配测试，AI 自动生成和修正，可视化展示匹配结果和捕获组',
+    icon: Search,
+    gradient: 'from-teal-500 to-emerald-600',
+    path: '/tools/regex-tester',
+    badge: '新',
+  },
+  {
+    id: 'sql-formatter',
+    title: 'SQL 格式化工具',
+    description: 'SQL 格式化、压缩、语法校验，支持 AI 智能修复语法错误和性能优化建议',
+    icon: Table2,
+    gradient: 'from-cyan-500 to-blue-600',
+    path: '/tools/sql-formatter',
     badge: '新',
   },
 ];

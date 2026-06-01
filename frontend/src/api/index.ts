@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest, IconDesignRequest, IconDesignResult, VirusScanResult, VirusAIAnalysisResult, RemediationScript, GenerateRemediationScriptRequest, RuleTemplate, RuleConfig, RulePullLog, RulePullResult, AIRuleGenerateRequest } from '@/types';
+import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest, IconDesignRequest, IconDesignResult, VirusScanResult, VirusAIAnalysisResult, RemediationScript, GenerateRemediationScriptRequest, RuleTemplate, RuleConfig, RulePullLog, RulePullResult, AIRuleGenerateRequest, CronGenerateRequest, CronGenerateResult, CronParseRequest, CronParseResult, CronNextTimesRequest, CronNextTimesResult, CronNLRequest, CronNLResult, RegexValidateRequest, RegexValidateResult, RegexGenerateRequest, RegexGenerateResult, RegexFixRequest, RegexFixResult, SqlFormatRequest, SqlFormatResult } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -1045,6 +1045,96 @@ export const toolsApi = {
       timeout: 60000,
     });
     return response.data as Blob;
+  },
+
+  generateCron: async (request: CronGenerateRequest) => {
+    const response = await toolsClient.post('/cron/generate', request);
+    return response.data as Result<CronGenerateResult>;
+  },
+
+  parseCron: async (request: CronParseRequest) => {
+    const response = await toolsClient.post('/cron/parse', request);
+    return response.data as Result<CronParseResult>;
+  },
+
+  getCronNextTimes: async (request: CronNextTimesRequest) => {
+    const response = await toolsClient.post('/cron/next-times', request);
+    return response.data as Result<CronNextTimesResult>;
+  },
+
+  parseCronNaturalLanguage: async (request: CronNLRequest) => {
+    const response = await toolsClient.post('/cron/parse-natural-language', request, {
+      timeout: 60000,
+    });
+    return response.data as Result<CronNLResult>;
+  },
+
+  validateRegex: async (request: RegexValidateRequest) => {
+    const response = await toolsClient.post('/regex/validate', request);
+    return response.data as Result<RegexValidateResult>;
+  },
+
+  generateRegex: async (request: RegexGenerateRequest) => {
+    const response = await toolsClient.post('/regex/generate', request, {
+      timeout: 60000,
+    });
+    return response.data as Result<RegexGenerateResult>;
+  },
+
+  fixRegex: async (request: RegexFixRequest) => {
+    const response = await toolsClient.post('/regex/fix', request, {
+      timeout: 60000,
+    });
+    return response.data as Result<RegexFixResult>;
+  },
+
+  /**
+   * 格式化SQL语句
+   * @param request 格式化请求参数
+   */
+  formatSql: async (request: SqlFormatRequest) => {
+    const response = await toolsClient.post('/sql/format', request);
+    return response.data as Result<SqlFormatResult>;
+  },
+
+  /**
+   * 压缩SQL语句
+   * @param request 压缩请求参数
+   */
+  compactSql: async (request: SqlFormatRequest) => {
+    const response = await toolsClient.post('/sql/compact', request);
+    return response.data as Result<SqlFormatResult>;
+  },
+
+  /**
+   * 校验SQL语法
+   * @param request 校验请求参数
+   */
+  validateSql: async (request: SqlFormatRequest) => {
+    const response = await toolsClient.post('/sql/validate', request);
+    return response.data as Result<SqlFormatResult>;
+  },
+
+  /**
+   * 使用AI修复SQL语法错误
+   * @param request 修复请求参数
+   */
+  fixSqlWithAI: async (request: SqlFormatRequest) => {
+    const response = await toolsClient.post('/sql/fix', request, {
+      timeout: 60000,
+    });
+    return response.data as Result<SqlFormatResult>;
+  },
+
+  /**
+   * 使用AI优化SQL性能
+   * @param request 优化请求参数
+   */
+  optimizeSqlWithAI: async (request: SqlFormatRequest) => {
+    const response = await toolsClient.post('/sql/optimize', request, {
+      timeout: 60000,
+    });
+    return response.data as Result<SqlFormatResult>;
   },
 };
 
