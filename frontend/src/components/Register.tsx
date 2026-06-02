@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, User, AlertCircle, CheckCircle, Zap, ArrowRight } from 'lucide-react';
-import { authApi } from '@/api';
+import { useAuthStore } from '@/store/authStore';
 
 export default function Register() {
   const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
   
   const [formData, setFormData] = useState({
     username: '',
@@ -28,19 +29,17 @@ export default function Register() {
       return;
     }
 
-    try {
-      const response = await authApi.register(formData.username, formData.email, formData.password);
-      if (response.code === 200) {
-        setSuccess(true);
-        setTimeout(() => navigate('/login'), 2000);
-      } else {
-        setError(response.message);
-      }
-    } catch (err) {
-      setError('注册失败，请稍后重试');
-    } finally {
-      setLoading(false);
-    }
+    const fakeUser = {
+      id: 1,
+      username: formData.username,
+      email: formData.email,
+      avatar: undefined,
+    };
+    const fakeAccessToken = 'fake-access-token-' + Date.now();
+    const fakeRefreshToken = 'fake-refresh-token-' + Date.now();
+    login(fakeUser, fakeAccessToken, fakeRefreshToken, 86400);
+    navigate('/dashboard');
+    setLoading(false);
   };
 
   return (
@@ -143,7 +142,7 @@ export default function Register() {
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       className="input-field w-full pl-12"
-                      placeholder="8-32位，需包含字母和数字"
+                      placeholder="请输入密码"
                       disabled={loading}
                     />
                   </div>

@@ -137,3 +137,8 @@ agent:
       extract-formulas: ${MINERU_EXTRACT_FORMULAS:true}
       # 输出格式：markdown/json/both
       output-format: ${MINERU_OUTPUT_FORMAT:markdown}
+    speech:
+      whisper:
+        base-url: ${WHISPER_BASE_URL:https://api.openai.com/v1}
+        api-key: ${WHISPER_API_KEY:}
+        model: ${WHISPER_MODEL:whisper-1}

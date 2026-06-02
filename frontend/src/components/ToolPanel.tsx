@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera, Shapes, ShieldAlert, Wrench, Clock, Search, Table2 } from 'lucide-react';
+import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera, Shapes, ShieldAlert, Wrench, Clock, Search, Table2, MonitorPlay, Mic } from 'lucide-react';
 
 interface ToolInfo {
   id: string;
@@ -117,6 +117,24 @@ const tools: ToolInfo[] = [
     icon: Table2,
     gradient: 'from-cyan-500 to-blue-600',
     path: '/tools/sql-formatter',
+    badge: '新',
+  },
+  {
+    id: 'video-player',
+    title: '在线视频播放器',
+    description: '本地 MP4 视频播放，0.25x~4x 自由调速，对抗网盘倍速收费限制，完全免费',
+    icon: MonitorPlay,
+    gradient: 'from-orange-500 to-red-600',
+    path: '/tools/video-player',
+    badge: '热门',
+  },
+  {
+    id: 'speech-to-text',
+    title: '语音转文字',
+    description: '上传手机录音文件，AI 智能识别语音内容转为可编辑文字，支持中文等 8 种语言',
+    icon: Mic,
+    gradient: 'from-green-500 to-emerald-600',
+    path: '/tools/speech-to-text',
     badge: '新',
   },
 ];

@@ -1128,6 +1128,26 @@ export interface SqlFormatResult {
   suggestions: string[];
 }
 
+export interface AudioFormatInfo {
+  formatName: string;
+  extension: string;
+  mimeType: string;
+  description: string;
+  maxFileSize: number;
+}
+
+export interface SpeechToTextResult {
+  text: string;
+  language: string;
+  detectedLanguage: string;
+  duration: number;
+  model: string;
+  originalFileName: string;
+  originalSize: number;
+  audioFormat: string;
+  durationMs: number;
+}
+
 export interface SqlFormatRequest {
   content: string;
   indentSize?: number;

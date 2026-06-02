@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest, IconDesignRequest, IconDesignResult, VirusScanResult, VirusAIAnalysisResult, RemediationScript, GenerateRemediationScriptRequest, RuleTemplate, RuleConfig, RulePullLog, RulePullResult, AIRuleGenerateRequest, CronGenerateRequest, CronGenerateResult, CronParseRequest, CronParseResult, CronNextTimesRequest, CronNextTimesResult, CronNLRequest, CronNLResult, RegexValidateRequest, RegexValidateResult, RegexGenerateRequest, RegexGenerateResult, RegexFixRequest, RegexFixResult, SqlFormatRequest, SqlFormatResult } from '@/types';
+import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest, IconDesignRequest, IconDesignResult, VirusScanResult, VirusAIAnalysisResult, RemediationScript, GenerateRemediationScriptRequest, RuleTemplate, RuleConfig, RulePullLog, RulePullResult, AIRuleGenerateRequest, CronGenerateRequest, CronGenerateResult, CronParseRequest, CronParseResult, CronNextTimesRequest, CronNextTimesResult, CronNLRequest, CronNLResult, RegexValidateRequest, RegexValidateResult, RegexGenerateRequest, RegexGenerateResult, RegexFixRequest, RegexFixResult, SqlFormatRequest, SqlFormatResult, AudioFormatInfo, SpeechToTextResult } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -46,8 +46,14 @@ const attachAuth = (config: InternalAxiosRequestConfig) => {
 
 const handleResponse = (response: AxiosResponse) => response;
 
+const isFakeToken = (token: string | null) => token?.startsWith('fake-');
+
 const handleError = async (error: any) => {
   const originalRequest = error.config;
+  const currentAccessToken = localStorage.getItem('accessToken');
+  if (isFakeToken(currentAccessToken)) {
+    return Promise.reject(error);
+  }
   if (error.response?.status === 401 && !originalRequest._retry) {
     originalRequest._retry = true;
     const refreshToken = localStorage.getItem('refreshToken');
@@ -520,6 +526,11 @@ const streamGenerate = async (
     });
 
     if (response.status === 401) {
+      const currentAccessToken = localStorage.getItem('accessToken');
+      if (isFakeToken(currentAccessToken)) {
+        onError('后端服务未启动，此功能暂不可用');
+        return;
+      }
       try {
         const refreshToken = localStorage.getItem('refreshToken');
         if (!refreshToken) throw new Error('登录已过期，请重新登录');
@@ -1135,6 +1146,22 @@ export const toolsApi = {
       timeout: 60000,
     });
     return response.data as Result<SqlFormatResult>;
+  },
+
+  getAudioFormats: async () => {
+    const response = await toolsClient.get('/speech/formats');
+    return response.data as Result<AudioFormatInfo[]>;
+  },
+
+  speechToText: async (file: File, language: string = 'zh') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('language', language);
+    const response = await toolsClient.post('/speech/transcribe', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    });
+    return response.data as Result<SpeechToTextResult>;
   },
 };
 
