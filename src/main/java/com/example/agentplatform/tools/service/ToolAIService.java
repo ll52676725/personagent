@@ -8,12 +8,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.ChatClient;
 import org.springframework.ai.chat.ChatResponse;
+import org.springframework.ai.chat.messages.Media;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MimeType;
 
 import java.util.List;
 import java.util.function.Function;
@@ -149,6 +152,82 @@ public class ToolAIService {
         );
         Prompt prompt = new Prompt(messages);
         return chatClient.call(prompt);
+    }
+
+    /**
+     * 调用AI聊天API（多模态，支持图片）
+     * <p>构建系统消息和包含图片的用户消息，调用ChatClient获取响应
+     * <p>图片通过Spring AI的Media对象以Resource形式传递，AI模型可真正"看到"图片内容
+     * 
+     * @param systemPrompt 系统提示词，定义AI角色和任务
+     * @param userPrompt 用户提示词，文字描述部分
+     * @param imageBase64 图片的Base64编码数据（不含data:前缀）
+     * @param imageMimeType 图片的MIME类型，如image/jpeg
+     * @return AI响应对象
+     */
+    public ChatResponse callChatApiWithImage(String systemPrompt, String userPrompt,
+                                              String imageBase64, String imageMimeType) {
+        byte[] imageBytes = java.util.Base64.getDecoder().decode(imageBase64);
+        ByteArrayResource imageResource = new ByteArrayResource(imageBytes);
+        MimeType mimeType = MimeType.valueOf(imageMimeType);
+        Media imageMedia = new Media(mimeType, imageResource);
+
+        List<Message> messages = List.of(
+                new SystemMessage(systemPrompt),
+                new UserMessage(userPrompt, List.of(imageMedia))
+        );
+        Prompt prompt = new Prompt(messages);
+        return chatClient.call(prompt);
+    }
+
+    /**
+     * 使用AI进行多模态分析（支持图片），自动降级
+     * <p>发送包含图片的多模态消息给AI模型进行分析
+     * <p>当AI服务不可用时，如果启用降级模式且提供了降级策略，则返回降级结果
+     * 
+     * @param <T> 分析结果的类型
+     * @param systemPrompt 系统提示词
+     * @param userPrompt 用户文本提示词
+     * @param imageBase64 图片Base64数据（不含data:前缀）
+     * @param imageMimeType 图片MIME类型
+     * @param parser JSON解析函数
+     * @param fallbackSupplier 降级策略提供者
+     * @return AI分析响应包装对象
+     * @throws BusinessException AI分析失败且未启用降级时抛出
+     */
+    public <T> AIResponse<T> analyzeWithImage(
+            String systemPrompt,
+            String userPrompt,
+            String imageBase64,
+            String imageMimeType,
+            Function<JsonNode, T> parser,
+            Supplier<T> fallbackSupplier) {
+
+        long startTime = System.currentTimeMillis();
+
+        try {
+            ChatResponse response = callChatApiWithImage(systemPrompt, userPrompt, imageBase64, imageMimeType);
+            String content = response.getResult().getOutput().getContent();
+            Integer tokens = response.getMetadata().getUsage() != null ?
+                    response.getMetadata().getUsage().getTotalTokens().intValue() : null;
+
+            String jsonContent = extractJson(content);
+            JsonNode root = objectMapper.readTree(jsonContent);
+
+            T result = parser.apply(root);
+
+            log.debug("多模态AI分析完成，耗时: {}ms, tokens: {}", System.currentTimeMillis() - startTime, tokens);
+
+            return new AIResponse<>(result, modelName, tokens, false);
+
+        } catch (Exception e) {
+            log.error("多模态AI分析失败", e);
+            if (fallbackEnabled && fallbackSupplier != null) {
+                log.warn("多模态AI分析失败，使用降级模式返回结果");
+                return new AIResponse<>(fallbackSupplier.get(), "fallback", null, true);
+            }
+            throw new BusinessException("AI分析失败: " + e.getMessage());
+        }
     }
 
     /**

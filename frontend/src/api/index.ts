@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest, IconDesignRequest, IconDesignResult, VirusScanResult, VirusAIAnalysisResult, RemediationScript, GenerateRemediationScriptRequest, RuleTemplate, RuleConfig, RulePullLog, RulePullResult, AIRuleGenerateRequest, CronGenerateRequest, CronGenerateResult, CronParseRequest, CronParseResult, CronNextTimesRequest, CronNextTimesResult, CronNLRequest, CronNLResult, RegexValidateRequest, RegexValidateResult, RegexGenerateRequest, RegexGenerateResult, RegexFixRequest, RegexFixResult, SqlFormatRequest, SqlFormatResult, AudioFormatInfo, SpeechToTextResult } from '@/types';
+import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest, IconDesignRequest, IconDesignResult, VirusScanResult, VirusAIAnalysisResult, RemediationScript, GenerateRemediationScriptRequest, RuleTemplate, RuleConfig, RulePullLog, RulePullResult, AIRuleGenerateRequest, CronGenerateRequest, CronGenerateResult, CronParseRequest, CronParseResult, CronNextTimesRequest, CronNextTimesResult, CronNLRequest, CronNLResult, RegexValidateRequest, RegexValidateResult, RegexGenerateRequest, RegexGenerateResult, RegexFixRequest, RegexFixResult, SqlFormatRequest, SqlFormatResult, AudioFormatInfo, SpeechToTextResult, ImageModerationRequest, ImageModerationResult } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -1162,6 +1162,42 @@ export const toolsApi = {
       timeout: 120000,
     });
     return response.data as Result<SpeechToTextResult>;
+  },
+
+  /**
+   * 图片内容检测
+   * <p>检测图片中的涉黄、涉政、涉爆等违规内容
+   * <p>使用多模态AI模型进行智能分析，支持降级模式
+   * 
+   * @param request 检测请求参数，包含图片Base64数据和检测配置
+   * @returns 检测结果，包含各分类检测详情、总体结论、处理建议等
+   */
+  moderateImage: async (request: ImageModerationRequest) => {
+    console.log('[ImageModeration] 开始图片内容检测:', {
+      fileName: request.fileName,
+      fileSize: request.fileSize,
+      mimeType: request.mimeType
+    });
+    const response = await toolsClient.post('/image-moderation/detect', request, {
+      timeout: 120000,
+    });
+    return response.data as Result<ImageModerationResult>;
+  },
+
+  /**
+   * 下载图片内容检测报告
+   * <p>将检测结果生成为文本报告文件，支持浏览器直接下载
+   * 
+   * @param result 检测结果数据
+   * @returns Blob对象，可用于创建下载链接
+   */
+  downloadModerationReport: async (result: ImageModerationResult) => {
+    console.log('[ImageModeration] 下载检测报告, 任务ID:', result.taskId);
+    const response = await toolsClient.post('/image-moderation/download-report', result, {
+      responseType: 'blob',
+      timeout: 30000,
+    });
+    return response.data as Blob;
   },
 };
 

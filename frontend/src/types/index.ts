@@ -1148,6 +1148,107 @@ export interface SpeechToTextResult {
   durationMs: number;
 }
 
+/**
+ * 内容检测分类详情
+ * <p>描述某一类违规内容的检测结果
+ */
+export interface ModerationCategoryDetail {
+  /** 分类编码：pornography-涉黄、political-涉政、violence-涉爆、other-其他 */
+  category: string;
+  /** 分类中文名称 */
+  categoryLabel: string;
+  /** 是否检测到违规内容 */
+  violated: boolean;
+  /** 置信度，0-100 */
+  confidence: number;
+  /** 风险等级：high-高危、medium-中危、low-低危、safe-安全 */
+  riskLevel: string;
+  /** 检测到的违规标签列表 */
+  labels: string[];
+  /** 检测说明 */
+  description: string;
+}
+
+/**
+ * 图片内容检测请求参数
+ */
+export interface ImageModerationRequest {
+  /** 图片Base64编码数据 */
+  imageBase64: string;
+  /** 原始文件名 */
+  fileName: string;
+  /** 文件大小，单位：字节 */
+  fileSize: number;
+  /** 图片MIME类型 */
+  mimeType: string;
+  /** 是否检测涉黄内容，默认true */
+  detectPornography?: boolean;
+  /** 是否检测涉政内容，默认true */
+  detectPolitical?: boolean;
+  /** 是否检测涉爆内容，默认true */
+  detectViolence?: boolean;
+  /** 是否检测其他违规内容，默认true */
+  detectOther?: boolean;
+  /** 检测敏感度阈值，0-100，默认80 */
+  sensitivityThreshold?: number;
+}
+
+/**
+ * 图片内容检测结果
+ */
+export interface ImageModerationResult {
+  /** 检测任务唯一标识 */
+  taskId: string;
+  /** 原始文件名 */
+  fileName: string;
+  /** 文件大小，单位：字节 */
+  fileSize: number;
+  /** 图片MIME类型 */
+  mimeType: string;
+  /** 图片宽度，单位：像素 */
+  width: number;
+  /** 图片高度，单位：像素 */
+  height: number;
+  /** 检测是否成功完成 */
+  success: boolean;
+  /** 总体检测结论：pass-通过、review-待复审、block-拦截 */
+  conclusion: string;
+  /** 总体结论中文描述 */
+  conclusionLabel: string;
+  /** 是否检测到违规内容 */
+  hasViolation: boolean;
+  /** 总体风险等级：high-高危、medium-中危、low-低危、safe-安全 */
+  overallRiskLevel: string;
+  /** 最高置信度，0-100 */
+  maxConfidence: number;
+  /** 涉黄内容检测详情 */
+  pornographyResult: ModerationCategoryDetail;
+  /** 涉政内容检测详情 */
+  politicalResult: ModerationCategoryDetail;
+  /** 涉爆内容检测详情 */
+  violenceResult: ModerationCategoryDetail;
+  /** 其他违规内容检测详情 */
+  otherResult: ModerationCategoryDetail;
+  /** 检测到的所有违规标签汇总 */
+  allViolationLabels: string[];
+  /** 审核建议 */
+  suggestion: string;
+  /** 详细检测说明 */
+  auditNote: string;
+  /** 使用的AI模型名称 */
+  model?: string;
+  /** Token消耗数量 */
+  tokens?: number;
+  /** 是否为降级模式返回的结果 */
+  fallback?: boolean;
+  /** 检测耗时，单位：毫秒 */
+  detectionDurationMs: number;
+  /** 检测完成时间 */
+  detectionTime: string;
+  /** 免责声明 */
+  disclaimer: string;
+}
+
 export interface SqlFormatRequest {
   content: string;
   indentSize?: number;

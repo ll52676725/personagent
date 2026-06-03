@@ -82,8 +82,8 @@ public class SpeechToTextServiceImpl implements SpeechToTextService {
 
     public SpeechToTextServiceImpl(RestTemplateBuilder restTemplateBuilder) {
         this.whisperRestTemplate = restTemplateBuilder
-                .connectTimeout(Duration.ofSeconds(30))
-                .readTimeout(Duration.ofSeconds(120))
+                .setConnectTimeout(Duration.ofSeconds(30))
+                .setReadTimeout(Duration.ofSeconds(120))
                 .build();
     }
 

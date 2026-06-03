@@ -84,6 +84,15 @@ const tools: ToolInfo[] = [
     badge: '新',
   },
   {
+    id: 'image-moderation',
+    title: '图片内容检测',
+    description: '智能检测图片中的涉黄、涉政、涉爆等违规内容，多维度安全分析，保障内容安全',
+    icon: ShieldAlert,
+    gradient: 'from-red-500 to-rose-600',
+    path: '/tools/image-moderation',
+    badge: '新',
+  },
+  {
     id: 'virus-detector',
     title: '病毒检测与安全分析',
     description: '检测系统可疑程序、高危漏洞，AI智能分析安全风险，提供修复方案和安全加固建议',
