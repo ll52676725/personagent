@@ -84,5 +84,18 @@ public class DataInitializer implements CommandLineRunner {
             agentRepository.save(rulesAgent);
             log.info("初始化AI编码规则Agent");
         }
+
+        if (!agentRepository.existsByCode("tech-report")) {
+            Agent techReportAgent = Agent.builder()
+                    .name("技术汇报Agent")
+                    .code("tech-report")
+                    .description("架构师专属技术汇报助手，输入场景自动生成专业PPT汇报方案，含执行摘要、架构设计、实施路线、ROI分析等完整内容")
+                    .moduleName("agent.techreport")
+                    .icon("https://api.iconify.design/material-symbols/present-to-all.svg")
+                    .status(1)
+                    .build();
+            agentRepository.save(techReportAgent);
+            log.info("初始化技术汇报Agent");
+        }
     }
 }

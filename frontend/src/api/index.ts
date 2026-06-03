@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest, IconDesignRequest, IconDesignResult, VirusScanResult, VirusAIAnalysisResult, RemediationScript, GenerateRemediationScriptRequest, RuleTemplate, RuleConfig, RulePullLog, RulePullResult, AIRuleGenerateRequest, CronGenerateRequest, CronGenerateResult, CronParseRequest, CronParseResult, CronNextTimesRequest, CronNextTimesResult, CronNLRequest, CronNLResult, RegexValidateRequest, RegexValidateResult, RegexGenerateRequest, RegexGenerateResult, RegexFixRequest, RegexFixResult, SqlFormatRequest, SqlFormatResult, AudioFormatInfo, SpeechToTextResult, ImageModerationRequest, ImageModerationResult } from '@/types';
+import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest, IconDesignRequest, IconDesignResult, VirusScanResult, VirusAIAnalysisResult, RemediationScript, GenerateRemediationScriptRequest, RuleTemplate, RuleConfig, RulePullLog, RulePullResult, AIRuleGenerateRequest, CronGenerateRequest, CronGenerateResult, CronParseRequest, CronParseResult, CronNextTimesRequest, CronNextTimesResult, CronNLRequest, CronNLResult, RegexValidateRequest, RegexValidateResult, RegexGenerateRequest, RegexGenerateResult, RegexFixRequest, RegexFixResult, SqlFormatRequest, SqlFormatResult, AudioFormatInfo, SpeechToTextResult, ImageModerationRequest, ImageModerationResult, TechReportRequest, TechReportResult, SceneTemplate, AudienceType } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -34,6 +34,13 @@ const RULES_BASE = `${API_BASE}/agent-rules`;
 const rulesClient: AxiosInstance = axios.create({
   baseURL: RULES_BASE,
   timeout: 120000,
+});
+
+const TECHREPORT_BASE = `${API_BASE}/agent-techreport`;
+
+const techReportClient: AxiosInstance = axios.create({
+  baseURL: TECHREPORT_BASE,
+  timeout: 180000,
 });
 
 const attachAuth = (config: InternalAxiosRequestConfig) => {
@@ -91,6 +98,8 @@ toolsClient.interceptors.request.use(attachAuth);
 toolsClient.interceptors.response.use(handleResponse, handleError);
 rulesClient.interceptors.request.use(attachAuth);
 rulesClient.interceptors.response.use(handleResponse, handleError);
+techReportClient.interceptors.request.use(attachAuth);
+techReportClient.interceptors.response.use(handleResponse, handleError);
 
 export const authApi = {
   register: async (username: string, email: string, password: string) => {
@@ -1318,4 +1327,203 @@ export const rulesApi = {
     const response = await rulesClient.get('/ai/quick', { params });
     return response.data as Result<string>;
   },
+};
+
+export const techReportApi = {
+  generate: async (request: TechReportRequest) => {
+    const response = await techReportClient.post('/generate', request);
+    return response.data as Result<TechReportResult>;
+  },
+
+  generateOutline: async (request: TechReportRequest) => {
+    const response = await techReportClient.post('/generate/outline', request);
+    return response.data as Result<TechReportResult>;
+  },
+
+  getScenes: async () => {
+    const response = await techReportClient.get('/scenes');
+    return response.data as Result<SceneTemplate[]>;
+  },
+
+  getAudiences: async () => {
+    const response = await techReportClient.get('/audiences');
+    return response.data as Result<AudienceType[]>;
+  },
+
+  exportMarkdown: async (result: TechReportResult) => {
+    const response = await techReportClient.post('/export/markdown', result);
+    return response.data as Result<string>;
+  },
+
+  exportPptOutline: async (result: TechReportResult) => {
+    const response = await techReportClient.post('/export/ppt-outline', result);
+    return response.data as Result<string>;
+  },
+
+  generateStream: (
+    request: TechReportRequest,
+    onChunk: (chunk: string) => void,
+    onComplete: () => void,
+    onError: (error: string) => void
+  ) => {
+    return streamTechReport(
+      '/generate/stream',
+      request,
+      onChunk,
+      onComplete,
+      onError
+    );
+  },
+
+  downloadMarkdown: (result: TechReportResult, filename: string = 'tech-report.md') => {
+    const markdown = result.contentMarkdown || '';
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  },
+
+  downloadPptOutline: (result: TechReportResult, filename: string = 'ppt-outline.txt') => {
+    techReportClient.post('/export/ppt-outline', result)
+      .then(response => {
+        const content = response.data.data;
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      })
+      .catch(error => console.error('下载PPT大纲失败:', error));
+  },
+};
+
+const streamTechReport = async (
+  endpoint: string,
+  body: any,
+  onChunk: (chunk: string) => void,
+  onComplete: () => void,
+  onError: (error: string) => void
+) => {
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...getAuthHeader(),
+    } as Record<string, string>;
+
+    let response = await fetch(`${TECHREPORT_BASE}${endpoint}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    if (response.status === 401) {
+      const currentAccessToken = localStorage.getItem('accessToken');
+      if (isFakeToken(currentAccessToken)) {
+        onError('后端服务未启动，此功能暂不可用');
+        return;
+      }
+      try {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) throw new Error('登录已过期，请重新登录');
+
+        const refreshResponse = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${refreshToken}`,
+          },
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        const data = await refreshResponse.json();
+        if (data.code === 200) {
+          localStorage.setItem('accessToken', data.data.accessToken);
+          localStorage.setItem('refreshToken', data.data.refreshToken);
+
+          const retryHeaders = {
+            'Content-Type': 'application/json',
+            ...getAuthHeader(),
+          } as Record<string, string>;
+
+          response = await fetch(`${TECHREPORT_BASE}${endpoint}`, {
+            method: 'POST',
+            headers: retryHeaders,
+            body: JSON.stringify(body),
+          });
+        } else {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          return;
+        }
+      } catch (e) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return;
+      }
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = '生成失败';
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('无法读取响应流');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              onChunk(content);
+            }
+          } catch (e) {
+            onChunk(data);
+          }
+        }
+      }
+    }
+
+    onComplete();
+  } catch (error: any) {
+    console.error('Tech report stream error:', error);
+    onError(error.message || '生成失败，请稍后重试');
+  }
 };

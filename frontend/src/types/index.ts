@@ -1257,3 +1257,51 @@ export interface SqlFormatRequest {
   userIntent?: string;
   enableAI?: boolean;
 }
+
+export interface ReportSlide {
+  slideNumber: number;
+  title: string;
+  type: string;
+  content: string;
+  keyPoints: string[];
+  speakerNotes: string;
+  visualSuggestion: string;
+  durationMinutes: number;
+}
+
+export interface TechReportResult {
+  reportTitle: string;
+  executiveSummary: string;
+  slides: ReportSlide[];
+  qaPreparation: string[];
+  presentationTips: string[];
+  totalSlides: number;
+  estimatedDurationMinutes: number;
+  model?: string;
+  contentMarkdown?: string;
+}
+
+export interface TechReportRequest {
+  scene: string;
+  description?: string;
+  audience: string;
+  reportType?: string;
+  slideCount?: number;
+  keyPoints?: string[];
+  industry?: string;
+  companySize?: string;
+  additionalInfo?: string;
+}
+
+export interface SceneTemplate {
+  name: string;
+  description: string;
+  defaultAudience: string;
+  slideCount: string;
+}
+
+export interface AudienceType {
+  type: string;
+  label: string;
+  description: string;
+}

@@ -17,7 +17,8 @@ import {
   ChevronDown,
   FileText,
   GitMerge,
-  Bot
+  Bot,
+  Presentation
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
@@ -32,6 +33,7 @@ const navItems = [
   { id: 'collections', label: '合集管理', icon: Layers, badge: '新' },
   { id: 'knowledge', label: '知识库', icon: Library, badge: '新' },
   { id: 'rules', label: '规则管理', icon: FileText, badge: '新' },
+  { id: 'tech-report', label: '技术汇报', icon: Presentation, badge: '新' },
   { id: 'tools', label: '工具集', icon: Wrench, badge: '新' },
   { id: 'settings', label: '设置', icon: Settings, badge: '' },
 ];
@@ -43,6 +45,10 @@ const rulesSubNav = [
   { id: 'rules/ai-generator', label: 'AI生成规则', icon: Bot },
 ];
 
+const techReportSubNav = [
+  { id: 'tech-report', label: '汇报生成器', icon: Presentation },
+];
+
 export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,7 +57,7 @@ export default function Layout({ children }: LayoutProps) {
   const setUser = useAuthStore((state) => state.setUser);
   
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(['rules']);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['rules', 'tech-report']);
 
   useEffect(() => {
     if (!user && localStorage.getItem('accessToken')) {
@@ -80,6 +86,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const getSubNav = (itemId: string) => {
     if (itemId === 'rules') return rulesSubNav;
+    if (itemId === 'tech-report') return techReportSubNav;
     return null;
   };
 
@@ -95,6 +102,7 @@ export default function Layout({ children }: LayoutProps) {
                item.id === 'knowledge' ? '/knowledge/bases' : 
                item.id === 'tools' ? '/tools' : 
                item.id === 'rules' ? '/rules/templates' :
+               item.id === 'tech-report' ? '/tech-report' :
                `/${item.id}`);
     }
   };

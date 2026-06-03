@@ -33,6 +33,7 @@ import AIRuleGenerator from '@/components/AIRuleGenerator';
 import VideoPlayer from '@/components/VideoPlayer';
 import SpeechToText from '@/components/SpeechToText';
 import ImageModeration from '@/components/ImageModeration';
+import TechReportGenerator from '@/components/TechReportGenerator';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
@@ -87,6 +88,7 @@ export default function App() {
       <Route path="/rules/configs" element={<ProtectedRoute><Layout><RuleConfigManager /></Layout></ProtectedRoute>} />
       <Route path="/rules/conflicts" element={<ProtectedRoute><Layout><ConflictResolver /></Layout></ProtectedRoute>} />
       <Route path="/rules/ai-generator" element={<ProtectedRoute><Layout><AIRuleGenerator /></Layout></ProtectedRoute>} />
+      <Route path="/tech-report" element={<ProtectedRoute><Layout><TechReportGenerator /></Layout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
       
       <Route path="*" element={<Navigate to="/dashboard" />} />
