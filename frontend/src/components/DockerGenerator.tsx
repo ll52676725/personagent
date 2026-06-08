@@ -265,7 +265,7 @@ export default function DockerGenerator() {
                   <select
                     value={request.buildTool || ''}
                     onChange={e => updateRequest('buildTool', e.target.value || undefined)}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-[#1a2332] border border-white/10 text-white focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 transition-all appearance-none cursor-pointer"
                   >
                     <option value="" className="bg-gray-800">自动检测</option>
                     <option value="maven" className="bg-gray-800">Maven</option>
@@ -277,7 +277,7 @@ export default function DockerGenerator() {
                   <select
                     value={request.jdkVersion || ''}
                     onChange={e => updateRequest('jdkVersion', e.target.value || undefined)}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 transition-all"
+                    className="w-full px-4 py-3 rounded-xl bg-[#1a2332] border border-white/10 text-white focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 transition-all appearance-none cursor-pointer"
                   >
                     <option value="" className="bg-gray-800">自动检测</option>
                     <option value="8" className="bg-gray-800">JDK 8</option>
@@ -447,7 +447,7 @@ export default function DockerGenerator() {
             </button>
             <button
               onClick={handleDeploy}
-              disabled={deploying || dockerAvailable === false}
+              disabled={deploying}
               className="flex-[2] py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 text-white font-medium hover:shadow-lg hover:shadow-emerald-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {deploying ? (

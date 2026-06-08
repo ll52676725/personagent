@@ -53,11 +53,14 @@ const attachAuth = (config: InternalAxiosRequestConfig) => {
 
 const handleResponse = (response: AxiosResponse) => response;
 
-const isFakeToken = (token: string | null) => token?.startsWith('fake-');
+const isFakeToken = (token: string | null) => token?.startsWith('fake-') && !token?.startsWith('fake-root-token-');
 
 const handleError = async (error: any) => {
   const originalRequest = error.config;
   const currentAccessToken = localStorage.getItem('accessToken');
+  if (currentAccessToken?.startsWith('fake-root-token-')) {
+    return Promise.reject(error);
+  }
   if (isFakeToken(currentAccessToken)) {
     return Promise.reject(error);
   }
@@ -536,6 +539,10 @@ const streamGenerate = async (
 
     if (response.status === 401) {
       const currentAccessToken = localStorage.getItem('accessToken');
+      if (currentAccessToken?.startsWith('fake-root-token-')) {
+        onError('后端认证失败，此功能暂不可用');
+        return;
+      }
       if (isFakeToken(currentAccessToken)) {
         onError('后端服务未启动，此功能暂不可用');
         return;
@@ -571,15 +578,11 @@ const streamGenerate = async (
         } else {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+          onError('登录已过期，请重新登录');
           return;
         }
       } catch (e) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        onError('登录已过期，请重新登录');
         return;
       }
     }
@@ -1448,6 +1451,10 @@ const streamTechReport = async (
 
     if (response.status === 401) {
       const currentAccessToken = localStorage.getItem('accessToken');
+      if (currentAccessToken?.startsWith('fake-root-token-')) {
+        onError('后端认证失败，此功能暂不可用');
+        return;
+      }
       if (isFakeToken(currentAccessToken)) {
         onError('后端服务未启动，此功能暂不可用');
         return;
@@ -1483,15 +1490,11 @@ const streamTechReport = async (
         } else {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+          onError('登录已过期，请重新登录');
           return;
         }
       } catch (e) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        onError('登录已过期，请重新登录');
         return;
       }
     }

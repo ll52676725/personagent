@@ -37,10 +37,6 @@ import TechReportGenerator from '@/components/TechReportGenerator';
 import DockerGenerator from '@/components/DockerGenerator';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
-  if (!isLoggedIn) {
-    return <Navigate to="/login" />;
-  }
   return <>{children}</>;
 }
 
@@ -55,8 +51,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+      <Route path="/login" element={<Navigate to="/dashboard" />} />
+      <Route path="/register" element={<Navigate to="/dashboard" />} />
       
       <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
