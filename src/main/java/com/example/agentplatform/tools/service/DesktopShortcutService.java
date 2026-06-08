@@ -62,27 +62,36 @@ public class DesktopShortcutService {
         sb.append("@echo off\r\n");
         sb.append("chcp 65001 >nul 2>&1\r\n");
         sb.append("title ").append(toolName).append("\r\n");
+        sb.append("set \"TOOL_URL=").append(toolUrl).append("\"\r\n");
+        sb.append("set \"BROWSER_PATH=\"\r\n");
+        sb.append("\r\n");
 
         if (Boolean.TRUE.equals(openAsApp)) {
-            sb.append("set \"URL=").append(toolUrl).append("\"\r\n");
-            sb.append("set \"CHROME_PATH=\"\r\n");
-            sb.append("for %%p in (\r\n");
-            sb.append("  \"%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe\"\r\n");
-            sb.append("  \"%PROGRAMFILES%\\Google\\Chrome\\Application\\chrome.exe\"\r\n");
-            sb.append("  \"%PROGRAMFILES(X86)%\\Google\\Chrome\\Application\\chrome.exe\"\r\n");
-            sb.append(") do (\r\n");
-            sb.append("  if exist %%p set \"CHROME_PATH=%%~p\"\r\n");
+            sb.append("rem 优先检测 Chrome\r\n");
+            sb.append("if exist \"%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe\" set \"BROWSER_PATH=%LOCALAPPDATA%\\Google\\Chrome\\Application\\chrome.exe\"\r\n");
+            sb.append("if not defined BROWSER_PATH if exist \"%PROGRAMFILES%\\Google\\Chrome\\Application\\chrome.exe\" set \"BROWSER_PATH=%PROGRAMFILES%\\Google\\Chrome\\Application\\chrome.exe\"\r\n");
+            sb.append("if not defined BROWSER_PATH if exist \"%PROGRAMFILES(X86)%\\Google\\Chrome\\Application\\chrome.exe\" set \"BROWSER_PATH=%PROGRAMFILES(X86)%\\Google\\Chrome\\Application\\chrome.exe\"\r\n");
+            sb.append("\r\n");
+            sb.append("rem 检测 Edge（Chromium 内核同样支持 --app）\r\n");
+            sb.append("if not defined BROWSER_PATH if exist \"%LOCALAPPDATA%\\Microsoft\\Edge\\Application\\msedge.exe\" set \"BROWSER_PATH=%LOCALAPPDATA%\\Microsoft\\Edge\\Application\\msedge.exe\"\r\n");
+            sb.append("if not defined BROWSER_PATH if exist \"%PROGRAMFILES%\\Microsoft\\Edge\\Application\\msedge.exe\" set \"BROWSER_PATH=%PROGRAMFILES%\\Microsoft\\Edge\\Application\\msedge.exe\"\r\n");
+            sb.append("if not defined BROWSER_PATH if exist \"%PROGRAMFILES(X86)%\\Microsoft\\Edge\\Application\\msedge.exe\" set \"BROWSER_PATH=%PROGRAMFILES(X86)%\\Microsoft\\Edge\\Application\\msedge.exe\"\r\n");
+            sb.append("\r\n");
+            sb.append("if defined BROWSER_PATH (\r\n");
+            sb.append("  start \"\" \"%BROWSER_PATH%\" --app=\"%TOOL_URL%\"\r\n");
+            sb.append("  goto :eof\r\n");
             sb.append(")\r\n");
-            sb.append("if defined CHROME_PATH (\r\n");
-            sb.append("  start \"\" \"%CHROME_PATH%\" --app=%URL%\r\n");
-            sb.append(") else (\r\n");
-            sb.append("  start \"\" %URL%\r\n");
-            sb.append(")\r\n");
-        } else {
-            sb.append("start \"\" \"").append(toolUrl).append("\"\r\n");
+            sb.append("\r\n");
         }
 
-        sb.append("exit\r\n");
+        sb.append("rem 使用系统默认浏览器\r\n");
+        sb.append("start \"\" \"%TOOL_URL%\"\r\n");
+        sb.append("if errorlevel 1 (\r\n");
+        sb.append("  echo.\r\n");
+        sb.append("  echo [错误] 无法打开浏览器，请检查浏览器是否安装\r\n");
+        sb.append("  echo URL: %TOOL_URL%\r\n");
+        sb.append("  pause\r\n");
+        sb.append(")\r\n");
 
         Files.writeString(filePath, sb.toString(), StandardCharsets.UTF_8,
                 StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
@@ -111,25 +120,39 @@ public class DesktopShortcutService {
             return null;
         }
 
+        Path zhDesktop = Paths.get(userHome, "桌面");
+        if (Files.isDirectory(zhDesktop)) {
+            return zhDesktop.toString();
+        }
+
         Path desktopPath = Paths.get(userHome, "Desktop");
         if (Files.isDirectory(desktopPath)) {
             return desktopPath.toString();
         }
 
-        Path oneDriveDesktop = Paths.get(userHome, "OneDrive", "桌面");
+        Path oneDriveZhDesktop = Paths.get(userHome, "OneDrive", "桌面");
+        if (Files.isDirectory(oneDriveZhDesktop)) {
+            return oneDriveZhDesktop.toString();
+        }
+
+        Path oneDriveDesktop = Paths.get(userHome, "OneDrive", "Desktop");
         if (Files.isDirectory(oneDriveDesktop)) {
             return oneDriveDesktop.toString();
         }
 
-        Path oneDriveDesktopEn = Paths.get(userHome, "OneDrive", "Desktop");
-        if (Files.isDirectory(oneDriveDesktopEn)) {
-            return oneDriveDesktopEn.toString();
+        Path oneDriveBusinessZh = Paths.get(userHome, "OneDrive", "桌面");
+        if (Files.isDirectory(oneDriveBusinessZh)) {
+            return oneDriveBusinessZh.toString();
         }
 
         String[] envVars = {"USERPROFILE", "HOMEPATH"};
         for (String env : envVars) {
             String envPath = System.getenv(env);
             if (envPath != null) {
+                Path envZhDesktop = Paths.get(envPath, "桌面");
+                if (Files.isDirectory(envZhDesktop)) {
+                    return envZhDesktop.toString();
+                }
                 Path envDesktop = Paths.get(envPath, "Desktop");
                 if (Files.isDirectory(envDesktop)) {
                     return envDesktop.toString();
@@ -137,7 +160,7 @@ public class DesktopShortcutService {
             }
         }
 
-        return desktopPath.toString();
+        return zhDesktop.toString();
     }
 
     private String resolveBaseUrl(String baseUrl) {
