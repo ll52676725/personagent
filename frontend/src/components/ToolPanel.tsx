@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera, Shapes, ShieldAlert, Wrench, Clock, Search, Table2, MonitorPlay, Mic, Container } from 'lucide-react';
+import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera, Shapes, ShieldAlert, Wrench, Clock, Search, Table2, MonitorPlay, Mic, Container, MonitorDown, Check, Loader2 } from 'lucide-react';
+import { toolsApi } from '@/api';
 
 interface ToolInfo {
   id: string;
@@ -159,9 +161,98 @@ const tools: ToolInfo[] = [
 
 export default function ToolPanel() {
   const navigate = useNavigate();
+  const [deploying, setDeploying] = useState<string | null>(null);
+  const [deployed, setDeployed] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleDeploy = async (e: React.MouseEvent, tool: ToolInfo) => {
+    e.stopPropagation();
+    if (deploying) return;
+
+    setDeploying(tool.id);
+    try {
+      const baseUrl = window.location.origin;
+      const response = await toolsApi.createDesktopShortcut({
+        toolId: tool.id,
+        toolName: tool.title,
+        toolPath: tool.path,
+        baseUrl,
+        openAsApp: true,
+      });
+
+      if (response.code === 200 && response.data?.success) {
+        setDeployed(prev => new Set(prev).add(tool.id));
+        showToast(response.data.message || `${tool.title} 已部署到桌面`);
+      } else {
+        showToast(response.data?.message || response.message || '部署失败', 'error');
+      }
+    } catch (error: any) {
+      showToast(error?.response?.data?.message || '部署失败，请检查后端服务是否启动', 'error');
+    } finally {
+      setDeploying(null);
+    }
+  };
+
+  const handleDeployAll = async () => {
+    if (deploying) return;
+
+    setDeploying('__all__');
+    let successCount = 0;
+    let failCount = 0;
+    const baseUrl = window.location.origin;
+
+    for (const tool of tools) {
+      try {
+        const response = await toolsApi.createDesktopShortcut({
+          toolId: tool.id,
+          toolName: tool.title,
+          toolPath: tool.path,
+          baseUrl,
+          openAsApp: true,
+        });
+        if (response.code === 200 && response.data?.success) {
+          successCount++;
+          setDeployed(prev => new Set(prev).add(tool.id));
+        } else {
+          failCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    setDeploying(null);
+    if (failCount === 0) {
+      showToast(`全部 ${successCount} 个工具已部署到桌面`);
+    } else {
+      showToast(`已部署 ${successCount} 个，失败 ${failCount} 个`, 'error');
+    }
+  };
 
   return (
     <div className="space-y-8">
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl shadow-2xl backdrop-blur-xl border animate-fadeIn ${
+          toast.type === 'success'
+            ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300'
+            : 'bg-red-500/20 border-red-500/30 text-red-300'
+        }`}>
+          <div className="flex items-center gap-2">
+            {toast.type === 'success' ? (
+              <Check className="w-5 h-5" />
+            ) : (
+              <ShieldAlert className="w-5 h-5" />
+            )}
+            <span className="text-sm font-medium">{toast.message}</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-card-strong mb-3">
@@ -175,6 +266,19 @@ export default function ToolPanel() {
             实用工具箱，助您高效创作
           </p>
         </div>
+
+        <button
+          onClick={handleDeployAll}
+          disabled={deploying !== null}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-white font-medium text-sm shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {deploying === '__all__' ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <MonitorDown className="w-4 h-4" />
+          )}
+          {deploying === '__all__' ? '批量部署中...' : '全部部署到桌面'}
+        </button>
       </div>
 
       <div className="relative">
@@ -183,6 +287,8 @@ export default function ToolPanel() {
         <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {tools.map((tool, index) => {
             const Icon = tool.icon;
+            const isDeploying = deploying === tool.id;
+            const isDeployed = deployed.has(tool.id);
             return (
               <div
                 key={tool.id}
@@ -192,7 +298,7 @@ export default function ToolPanel() {
               >
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
                 <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-cyan-500/5 to-transparent rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                
+
                 <div className="relative">
                   <div className="relative mb-4">
                     <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${tool.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
@@ -204,12 +310,36 @@ export default function ToolPanel() {
                       </span>
                     )}
                   </div>
-                  
+
                   <h3 className="text-xl font-bold text-white mb-2">{tool.title}</h3>
                   <p className="text-gray-400 text-sm mb-4 line-clamp-2">{tool.description}</p>
-                  <div className="flex items-center text-cyan-400 group-hover:text-white transition-colors">
-                    <span className="text-sm font-medium">立即使用</span>
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center text-cyan-400 group-hover:text-white transition-colors">
+                      <span className="text-sm font-medium">立即使用</span>
+                      <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </div>
+
+                    <button
+                      onClick={(e) => handleDeploy(e, tool)}
+                      disabled={deploying !== null}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 ${
+                        isDeployed
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : isDeploying
+                          ? 'bg-white/5 text-gray-400 border border-white/10'
+                          : 'bg-violet-500/15 text-violet-400 border border-violet-500/25 hover:bg-violet-500/25 hover:text-violet-300'
+                      }`}
+                    >
+                      {isDeploying ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : isDeployed ? (
+                        <Check className="w-3.5 h-3.5" />
+                      ) : (
+                        <MonitorDown className="w-3.5 h-3.5" />
+                      )}
+                      {isDeploying ? '部署中' : isDeployed ? '已部署' : '部署'}
+                    </button>
                   </div>
                 </div>
               </div>

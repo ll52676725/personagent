@@ -1344,3 +1344,19 @@ export interface DockerDeployResult {
   success: boolean;
   errorMessage: string | null;
 }
+
+export interface DesktopShortcutRequest {
+  toolId: string;
+  toolName: string;
+  toolPath: string;
+  baseUrl?: string;
+  openAsApp?: boolean;
+}
+
+export interface DesktopShortcutResult {
+  success: boolean;
+  shortcutPath: string;
+  toolName: string;
+  url: string;
+  message: string;
+}
