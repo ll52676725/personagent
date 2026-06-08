@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 
 @Slf4j
+@Service
 public class DesktopShortcutService {
 
     public DesktopShortcutResultDTO createShortcut(DesktopShortcutRequestDTO request) {
