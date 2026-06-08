@@ -1305,3 +1305,42 @@ export interface AudienceType {
   label: string;
   description: string;
 }
+
+export interface DockerGenerateRequest {
+  projectPath: string;
+  imageName?: string;
+  imageTag?: string;
+  port?: number;
+  jdkVersion?: string;
+  buildTool?: string;
+  jvmOpts?: string;
+  springProfile?: string;
+  includeDockerCompose?: boolean;
+}
+
+export interface DockerGenerateResult {
+  projectPath: string;
+  projectName: string;
+  buildTool: string;
+  jdkVersion: string;
+  packaging: string;
+  mainClass: string | null;
+  dockerfileContent: string;
+  dockerignoreContent: string;
+  dockerComposeContent: string | null;
+  dockerfileWritten: boolean;
+  dockerignoreWritten: boolean;
+  dockerComposeWritten: boolean;
+}
+
+export interface DockerDeployResult {
+  imageName: string;
+  containerId: string;
+  containerName: string;
+  status: string;
+  buildLog: string;
+  runLog: string;
+  mappedPort: number;
+  success: boolean;
+  errorMessage: string | null;
+}

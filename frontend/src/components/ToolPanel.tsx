@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera, Shapes, ShieldAlert, Wrench, Clock, Search, Table2, MonitorPlay, Mic } from 'lucide-react';
+import { Image, ArrowRight, FileText, Code2, HardDrive, Database, Globe, Camera, Shapes, ShieldAlert, Wrench, Clock, Search, Table2, MonitorPlay, Mic, Container } from 'lucide-react';
 
 interface ToolInfo {
   id: string;
@@ -144,6 +144,15 @@ const tools: ToolInfo[] = [
     icon: Mic,
     gradient: 'from-green-500 to-emerald-600',
     path: '/tools/speech-to-text',
+    badge: '新',
+  },
+  {
+    id: 'docker-generator',
+    title: 'Docker 容器化工具',
+    description: '自动分析 Java 项目，生成 Dockerfile、.dockerignore、docker-compose.yml，一键构建部署',
+    icon: Container,
+    gradient: 'from-blue-500 to-indigo-600',
+    path: '/tools/docker-generator',
     badge: '新',
   },
 ];

@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest, IconDesignRequest, IconDesignResult, VirusScanResult, VirusAIAnalysisResult, RemediationScript, GenerateRemediationScriptRequest, RuleTemplate, RuleConfig, RulePullLog, RulePullResult, AIRuleGenerateRequest, CronGenerateRequest, CronGenerateResult, CronParseRequest, CronParseResult, CronNextTimesRequest, CronNextTimesResult, CronNLRequest, CronNLResult, RegexValidateRequest, RegexValidateResult, RegexGenerateRequest, RegexGenerateResult, RegexFixRequest, RegexFixResult, SqlFormatRequest, SqlFormatResult, AudioFormatInfo, SpeechToTextResult, ImageModerationRequest, ImageModerationResult, TechReportRequest, TechReportResult, SceneTemplate, AudienceType } from '@/types';
+import { LoginResult, Agent, Article, Collection, CollectionOutline, GenerateResult, Result, SectionImageResult, SectionImageGenerateRequest, KnowledgeBase, KnowledgeItem, KnowledgeQueryResult, SourceReference, ImageFormatInfo, ImageConvertResult, FileFormatInfo, FileConvertResult, JsonFormatResult, JsonFormatRequest, DriveInfo, DriveAnalysisResult, AIAnalysisResult, RegistryAnalysisResult, CleanupScript, GenerateScriptRequest, RegistryAIAnalysisResult, CurrentIpInfo, PingResult, TracerouteResult, DnsResult, LanScanResult, ConnectivityAnalysis, PhotoSize, PhotoStandardizationResult, PhotoStandardizationRequest, IconDesignRequest, IconDesignResult, VirusScanResult, VirusAIAnalysisResult, RemediationScript, GenerateRemediationScriptRequest, RuleTemplate, RuleConfig, RulePullLog, RulePullResult, AIRuleGenerateRequest, CronGenerateRequest, CronGenerateResult, CronParseRequest, CronParseResult, CronNextTimesRequest, CronNextTimesResult, CronNLRequest, CronNLResult, RegexValidateRequest, RegexValidateResult, RegexGenerateRequest, RegexGenerateResult, RegexFixRequest, RegexFixResult, SqlFormatRequest, SqlFormatResult, AudioFormatInfo, SpeechToTextResult, ImageModerationRequest, ImageModerationResult, TechReportRequest, TechReportResult, SceneTemplate, AudienceType, DockerGenerateRequest, DockerGenerateResult, DockerDeployResult } from '@/types';
 
 /** 与后端同域部署时使用相对路径；开发模式可通过 VITE_API_BASE_URL 覆盖 */
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -1207,6 +1207,27 @@ export const toolsApi = {
       timeout: 30000,
     });
     return response.data as Blob;
+  },
+
+  generateDockerfile: async (request: DockerGenerateRequest) => {
+    const response = await toolsClient.post('/docker/generate', request, {
+      timeout: 60000,
+    });
+    return response.data as Result<DockerGenerateResult>;
+  },
+
+  deployDocker: async (request: DockerGenerateRequest) => {
+    const response = await toolsClient.post('/docker/deploy', request, {
+      timeout: 600000,
+    });
+    return response.data as Result<DockerDeployResult>;
+  },
+
+  checkDocker: async () => {
+    const response = await toolsClient.get('/docker/check-docker', {
+      timeout: 10000,
+    });
+    return response.data as Result<boolean>;
   },
 };
 

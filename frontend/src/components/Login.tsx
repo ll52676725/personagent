@@ -20,21 +20,6 @@ export default function Login() {
     setLoading(true);
     setError('');
 
-    if (formData.username === 'root' && formData.password === '123') {
-      const fakeUser = {
-        id: 1,
-        username: 'root',
-        email: 'root@agentai.com',
-        avatar: undefined,
-      };
-      const fakeAccessToken = 'fake-access-token-' + Date.now();
-      const fakeRefreshToken = 'fake-refresh-token-' + Date.now();
-      login(fakeUser, fakeAccessToken, fakeRefreshToken, 86400);
-      navigate('/dashboard');
-      setLoading(false);
-      return;
-    }
-
     try {
       const response = await authApi.login(formData.username, formData.password);
       if (response.code === 200) {

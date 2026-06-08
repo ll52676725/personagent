@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, User, AlertCircle, CheckCircle, Zap, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { authApi } from '@/api';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -29,17 +30,25 @@ export default function Register() {
       return;
     }
 
-    const fakeUser = {
-      id: 1,
-      username: formData.username,
-      email: formData.email,
-      avatar: undefined,
-    };
-    const fakeAccessToken = 'fake-access-token-' + Date.now();
-    const fakeRefreshToken = 'fake-refresh-token-' + Date.now();
-    login(fakeUser, fakeAccessToken, fakeRefreshToken, 86400);
-    navigate('/dashboard');
-    setLoading(false);
+    try {
+      const response = await authApi.register(formData.username, formData.email, formData.password);
+      if (response.code === 200) {
+        const loginResponse = await authApi.login(formData.username, formData.password);
+        if (loginResponse.code === 200) {
+          const { accessToken, refreshToken, expiresIn, user } = loginResponse.data;
+          login(user, accessToken, refreshToken, expiresIn);
+          navigate('/dashboard');
+        } else {
+          setSuccess(true);
+        }
+      } else {
+        setError(response.message || '注册失败');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || '注册失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

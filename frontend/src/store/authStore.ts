@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 import { UserInfo } from '@/types';
 
+const storedAccessToken = localStorage.getItem('accessToken');
+const storedRefreshToken = localStorage.getItem('refreshToken');
+
+if (storedAccessToken && storedAccessToken.startsWith('fake-')) {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+}
+
+const validAccessToken = storedAccessToken && !storedAccessToken.startsWith('fake-') ? storedAccessToken : null;
+const validRefreshToken = storedRefreshToken && !storedRefreshToken.startsWith('fake-') ? storedRefreshToken : null;
+
 interface AuthStore {
   user: UserInfo | null;
   accessToken: string | null;
@@ -15,10 +26,10 @@ interface AuthStore {
 
 export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
-  accessToken: localStorage.getItem('accessToken') || null,
-  refreshToken: localStorage.getItem('refreshToken') || null,
+  accessToken: validAccessToken,
+  refreshToken: validRefreshToken,
   expiresIn: 0,
-  isLoggedIn: !!localStorage.getItem('accessToken'),
+  isLoggedIn: !!validAccessToken,
 
   login: (user, accessToken, refreshToken, expiresIn) => {
     localStorage.setItem('accessToken', accessToken);

@@ -34,6 +34,7 @@ import VideoPlayer from '@/components/VideoPlayer';
 import SpeechToText from '@/components/SpeechToText';
 import ImageModeration from '@/components/ImageModeration';
 import TechReportGenerator from '@/components/TechReportGenerator';
+import DockerGenerator from '@/components/DockerGenerator';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
@@ -84,6 +85,7 @@ export default function App() {
       <Route path="/tools/video-player" element={<ProtectedRoute><Layout><VideoPlayer /></Layout></ProtectedRoute>} />
       <Route path="/tools/speech-to-text" element={<ProtectedRoute><Layout><SpeechToText /></Layout></ProtectedRoute>} />
       <Route path="/tools/image-moderation" element={<ProtectedRoute><Layout><ImageModeration /></Layout></ProtectedRoute>} />
+      <Route path="/tools/docker-generator" element={<ProtectedRoute><Layout><DockerGenerator /></Layout></ProtectedRoute>} />
       <Route path="/rules/templates" element={<ProtectedRoute><Layout><RuleTemplateManager /></Layout></ProtectedRoute>} />
       <Route path="/rules/configs" element={<ProtectedRoute><Layout><RuleConfigManager /></Layout></ProtectedRoute>} />
       <Route path="/rules/conflicts" element={<ProtectedRoute><Layout><ConflictResolver /></Layout></ProtectedRoute>} />
